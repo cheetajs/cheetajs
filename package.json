@@ -8,8 +8,8 @@
   },
   "devDependencies": {
     "grunt": "~0.3.1",
-    "grunt-contrib-uglify": "~0.2.2",
-    "grunt-closure-tools": "~0.6.13"
+    "grunt-contrib-concat": "~0.3.0",
+    "grunt-contrib-uglify": "~0.2.7"
   },
   "repository": {
     "type": "git",

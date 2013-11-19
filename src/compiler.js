@@ -1,3 +1,9 @@
+var $cheeta = {};
+window['$cheeta'] = $cheeta;
+$cheeta.rootModel = new $cheeta.Model(null, "ROOT");
+
+$cheeta.directives = [];
+
 $cheeta.compiler = {
 	recursiveCompile: function(parentModels, node, skipSiblings) {
 		if (node) {
