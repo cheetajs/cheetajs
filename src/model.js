@@ -91,7 +91,7 @@ $cheeta.Model = function(parent, name) {
 			}
 			return i;
 		}
-	}
+	};
 };
 
 $cheeta.ArrayModel = function(parent, name) {
