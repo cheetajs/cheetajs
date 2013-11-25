@@ -6,6 +6,7 @@ $cheeta.Model = function(parent, name) {
 		__children: {},
 		__value: null,
 		__bindings: {},
+		__name: name,
 		__parent: parent,
 		__update: function() {
 			if (!this.__hasChildren()) {
@@ -29,7 +30,7 @@ $cheeta.Model = function(parent, name) {
 		},
 		__hasChildren: function() {
 			for (var key in this.__children) {
-				return true;
+				return true || key;
 			}
 			return false;
 		},
@@ -41,6 +42,7 @@ $cheeta.Model = function(parent, name) {
 					elem.style.display = 'none';
 				}
 				this.__children[modelName] = model;
+				model.__name = modelName;
 			}
 			if (model.__bindings[as || modelName] == null) {
 				model.__bindings[as || modelName] = [];
@@ -90,6 +92,14 @@ $cheeta.Model = function(parent, name) {
 				i++;
 			}
 			return i;
+		},
+		__toExpr: function() {
+			var expr = this.name, m = this.__parent;
+			while (m != null && m.name != null) {
+				expr = name + '.' + expr;
+				m = m.__parent;
+			}
+			return expr;
 		}
 	};
 };
@@ -143,7 +153,7 @@ $cheeta.ArrayModel = function(parent, name) {
 				this[i] = this.__value[i];
 			}
 		}
-	}
+	};
 	
 	var model = new $cheeta.Model(parent, name);
 	for (var key in arrayModel) {
