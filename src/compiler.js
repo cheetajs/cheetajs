@@ -61,6 +61,8 @@ $cheeta.compiler = {
 								}
 							}
 						}
+						
+						elem.setAttribute(attr.name, (elem.getAttribute(attrName) || '') + )
 					}
 				}
 			}
