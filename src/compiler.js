@@ -15,12 +15,24 @@ $cheeta.compiler = {
 		return elem.getAttribute(directive + '.') || elem.getAttribute('data-' + directive + '.');
 	},
 	compileDirectives: function(parentModels, elem) {
-		for (var i = 0; i < $cheeta.directives.length; i++) {
-			var attrVal = this.findDirective(elem, $cheeta.directives[i].name);
-			if (attrVal != null) {
-				parentModels = ($cheeta.directives[i].fn(attrVal, elem, parentModels) || []).concat(parentModels);
-			}
+		for (var i = 0; i < elem.attributes.length; i++) {
+		  var attr = elem.attributes[i];
+		  if (attr.specified) {
+			  if (attr.name.indexOf('.', attr.name.length - 1) !== -1) {
+				  var val = attr.value;
+				  for (var ii = 0; ii < val.length; ii++) {
+					  var ch = val.chartAt(ii);
+					  if (ch === '\'' && val.chartAt)
+				  }
+			  }
+		  }
 		}
+//		for (var i = 0; i < $cheeta.directives.length; i++) {
+//			var attrVal = this.findDirective(elem, $cheeta.directives[i].name);
+//			if (attrVal != null) {
+//				parentModels = ($cheeta.directives[i].fn(attrVal, elem, parentModels) || []).concat(parentModels);
+//			}
+//		}
 		return parentModels;
 	},
 	compile: function() {
