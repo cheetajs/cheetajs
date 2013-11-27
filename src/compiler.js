@@ -50,7 +50,7 @@ $cheeta.compiler = {
 									}
 									if (index > -1) {
 										var name = val.substring(index, i);
-										result += $cheeta.directives['bind'].bindModel(parentModels, name, elem).__toExpr(); 
+										result += $cheeta.directives['bind'].bindModel(parentModels, name, elem, attrName).__toExpr(); 
 										index = -1;
 									}
 									result += ch;
