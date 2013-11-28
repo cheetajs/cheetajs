@@ -50,7 +50,7 @@ $cheeta.compiler = {
 									}
 									if (index > -1) {
 										var name = val.substring(index, i);
-										result += $cheeta.directives['bind'].bindModel(parentModels, name, elem, attrName).__toExpr(); 
+										result += this.bindModel(parentModels, name, elem, attrName).__toExpr(); 
 										index = -1;
 									}
 									result += ch;
@@ -68,6 +68,14 @@ $cheeta.compiler = {
 			}
 		}
 		return parentModels;
+	},
+	bindModel: function(elem, attr, name) {
+		
+		parentModel.__bindElement(elem, attr, name, as, isArray);
+		if (isArray) {
+			parentModel.__children[name].__parentModels = [parentModel].concat(parentModels);
+		}
+		return parentModel.__children[name];
 	},
 	compile: function() {
 		scripts = document.getElementsByTagName('script');
