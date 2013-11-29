@@ -10,7 +10,7 @@ $cheeta.directives['ctrl'] = $cheeta.directives['bind'] = function(def, elem, pa
 
 		models.push($cheeta.model.bind(parentModels, name, {
 				elem: elem,
-				attr:, 'ctrl', 
+				attr: 'ctrl', 
 				as: as
 			}));
 	}

@@ -23,74 +23,12 @@ $cheeta.compiler = {
 					if (attrName.indexOf('data-') == 0) {
 						attrName = attrName.substring('data-'.length);
 					}
-					var directive = $cheeta.directives[attrName];
-					if (directive != null) {
-						parentModels = (directive(attr.value, elem, parentModels) || []).concat(parentModels);
-					} else {
-						var expr = this.parseExpr(attr.value, function(name) {
-							return $cheeta.model.bind(parentModels, name, 
-									{
-										elem: elem, 
-										attr: attrName,
-										bindAttr: attr.name,
-										origAttrVal: elem.getAttribute(attrName) || '',
-										update: function() {
-											this.elem.setAttribute(this.attr, this.origAttrVal + eval(this.elem.getAttribute(bindAttr)));
-										}
-									}).__toExpr()
-						});
-						elem.setAttribute(attr.name, expr);
-					}
+					var directive = $cheeta.directives[attrName] || $cheeta.directives[''];
+					parentModels = (directive(attr.value, elem, parentModels) || []).concat(parentModels);
 				}
 			}
 		}
 		return parentModels;
-	},
-	parseExpr: function(val, bindModel) {
-		var qoute = null, regexpMod = false, result = '', index = -1, ch = val.charAt(i), models = [];
-		for (var i = 0; i < val.length; i++) {
-			if (qoute != null) {
-				if (ch == quote && val.charAt(i - 1) != '\\') {
-					if (quote == '/') {
-						regexpMod = true;
-					}
-					quote = null;
-				}
-				result += ch;
-			} else {
-				if (regexpMod) {
-					if (ch < 'a' && ch > 'z') {
-						regexpMod = false;
-					}
-					result += ch;
-				} else if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '!' || ch == '"' ||
-						(ch >= '%' && ch <= '/') || (ch >= ':' && ch <= '?')) {
-					if (ch == '\'' || ch == '"' || ch == '/') {
-						quote = ch;
-					}
-					if (index > -1) {
-						var name = val.substring(index, i);
-						var modelVar = bindModel(name)
-						result += m != null ? modelVar : name;
-						index = -1;
-					}
-					result += ch;
-				} else {
-					if (index == -1) {
-						index = i;
-					}
-				}
-			}
-		}
-		return result;
-	},
-	bindModel: function(elem, attr, name) {
-		
-		parentModel.__bindElement(elem, attr, name, as, isArray);
-		if (isArray) {
-			parentModel.__children[name].__parentModels = [parentModel].concat(parentModels);
-		}
-		return parentModel.__children[name];
 	},
 	compile: function() {
 		scripts = document.getElementsByTagName('script');

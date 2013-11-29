@@ -25,8 +25,8 @@ $cheeta.directives['for'] = function(def, elem, parentModels) {
 				var oldBind = this.elem.getAttribute('bind.') ? this.elem.getAttribute('bind.').value : '';
 				oldBind += this.elem.getAttribute('data-bind.') ? this.elem.getAttribute('data-bind.').value : '';
 				for (var i = oldVal.length; i < val.length; i++) {
-					$cheeta.model.forEachElem(model, function(elem) {
-						var clone = elem.cloneNode();
+					$cheeta.model.forEachElem(model, function(elemProp) {
+						var clone = elemProp.elem.cloneNode();
 						clone.removeAttribute('bind.');
 						clone.removeAttribute('data-bind.');
 						clone.setAttribute('bind.', arrayName + '.' + i + ' as ' + arrayVar + (oldBind.length > 0 ? ';' + oldBind : ''));
