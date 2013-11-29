@@ -49,7 +49,7 @@ $cheeta.model = {
 		}
 		return model;
 	},
-	root: new $cheeta.Model(null, "ROOT")
+	root: new $cheeta.Model(null, "ROOT"),
 	update: function(model) {
 		if (!this.hasChildren(model)) {
 			this.forEachElem(model, function(elem) {
