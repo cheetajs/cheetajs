@@ -18,3 +18,5 @@ RemoteSystemsTempFiles
 node_modules
 .classpath
 .project
+.externalToolBuilders
+grunt.sh

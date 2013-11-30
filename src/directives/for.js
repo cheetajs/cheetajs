@@ -1,41 +1,50 @@
-$cheeta.directives['for'] = function(def, elem, parentModels) {
-	var split = def.split(/ +in +/g), name, arrayVar, as;
+$cheeta.directives['for'] = function(elem, attr, parentModels, baseAttrName) {
+	var split = attr.value.split(/ +in +/g), name, arrayVar, as;
 	name = split[1];
 	arrayVar = split[0];
 	split = name.split(/ +as +/g);
 	name = split[0];
 	as = split.length > 1 ? split[1] : null;
-	$cheeta.model.bind(parentModels, name, {
+	var binding = {
 		elem: elem, 
 		arrayVar: arrayVar,
 		arrayName: name,
 		as: as,
-		update: function(model, val, oldVal) {
-			if (oldVal.length > val.length) {
-				for (var i = oldVal.length - 1; i >= val.length; i--) {
-					$cheeta.model.forEachElem(model.__children[i], function(elem) {
-						elem.parentNode.removeChild(elem);
-						delete this.__parent.__children[i];
-						delete this.__parent[i];
-					});
+		update: function(oldLen, newLen) {
+			if (oldLen instanceof Object) {
+				newLen = oldLen.length;
+				oldLen = 0;
+			}
+			if (oldLen > newLen) { 
+				for (var i = oldLen - 1; i >= newLen; i--) { 
+					model[i] = null;
+					delete model[i];
+					delete model.__children[i];
 				}
-			} else if (oldVal.length < val.length) {
+			} else if (oldLen < newLen) {
 				var arrayVar = this.arrayVar;
-				var arrayName = this.arrayName;
+				var arrayName = this.arrayName; 
 				var oldBind = this.elem.getAttribute('bind.') ? this.elem.getAttribute('bind.').value : '';
 				oldBind += this.elem.getAttribute('data-bind.') ? this.elem.getAttribute('data-bind.').value : '';
-				for (var i = oldVal.length; i < val.length; i++) {
-					$cheeta.model.forEachElem(model, function(elemProp) {
-						var clone = elemProp.elem.cloneNode();
-						clone.removeAttribute('bind.');
-						clone.removeAttribute('data-bind.');
-						clone.setAttribute('bind.', arrayName + '.' + i + ' as ' + arrayVar + (oldBind.length > 0 ? ';' + oldBind : ''));
-						clone.style.display = '';
-						elem.parentNode.insertBefore(clone, elem);
-						$cheeta.compiler.recursiveCompile(this.__parentModels, clone, true);
-					});
+				for (var i = oldLen; i < newLen; i++) {
+					var clone = this.elem.cloneNode();
+					clone.removeAttribute('for.');
+					clone.removeAttribute('data-for.');
+					clone.setAttribute('data-__for.');
+					clone.setAttribute('bind.', arrayName + '.' + i + ' as ' + arrayVar + (oldBind.length > 0 ? ';' + oldBind : ''));
+					clone.style.display = '';
+					elem.parentNode.insertBefore(clone, this.elem);
+					$cheeta.compiler.recursiveCompile(this.__parentModels, clone, true);
 				}
-			}
+			} 
+			//TODO splice with the same size
 		}
-	});
+	}
+	var model = $cheeta.model.bind(parentModels, name, binding);
+	model = $cheeta.model.extendArray(model);
+	binding.__parentModels = [model.__parent].concat(parentModels);
+
+	elem.style.display = 'none';
+
+	return [model];
 };

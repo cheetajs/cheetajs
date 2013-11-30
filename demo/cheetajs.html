@@ -8,79 +8,79 @@ div {
 }
 </style>
 </head>
-<body data-eval.="root3.value = 99">
-	<div data-bind.="root.child.value"></div>
-	<div data-template.="template1" data-bind.="root1 as r; root3.child as c"></div>
+<body data-init.="root3.value = 99">
+	<div data-text.="root.child.value"></div>
+	<div data-template.="template1" data-ctrl.="root1 as r; root3.child as c"></div>
 	root1:
-	<div data-bind.="root1; root3 as r3" data-eval.="root1.aa = 'xxxx'">
+	<div data-ctrl.="root1; root3 as r3" data-init.=".aa = 'xxxx'">
 		<ul>		
-			<li data-bind.="name in .array">
-				<input type="text" data-bind.="name.value">
-				<input type="text" data-bind.="r3.value">
+			<li data-for.="name in .array">
+				<input type="text" data-value.="name.value">
+				<input type="text" data-value.="r3.value">
 			</li>
 		</ul>
 	
 		root1.value: 
-		<div data-bind.="root1.value"></div>
+		<div data-text.="root1.value"></div>
 		.value: 
-		<div data-bind.=".value"></div>
+		<div data-html.=".value"></div>
 		.child: 
-		<div data-bind.=".child">
-			.value<input type='text' data-bind.=".value">
+		<div data-ctrl.=".child">
+			.value<input type='text' data-value.=".value">
 		</div>
 		root1.child: 
 		<div data-bind.="root1.child">
-			.value<input type='text' data-bind.=".value">
+			.value<input type='text' data-value.=".value">
 		</div>
 		root1.child: 
 		<div data-bind.="root1.child">
-			child.value<input type='text' data-bind.="child.value">
-			root1.child.value<input type='text' data-bind.="root1.child.value">
+			child.value<input type='text' data-value.="child.value">
+			root1.child.value<input type='text' data-value.="root1.child.value">
 		</div>
 		root1.child: 
 		<div data-bind.="root1.child">
-			uchild.value<input type='text' data-bind.="uchild.value">
-			.uchild.value<input type='text' data-bind.=".uchild.value">
-			.vchild.value.a<input type='text' data-bind.=".vchild.value.a">
-			vchild.value.a<input type='text' data-bind.="vchild.value.a">
+			uchild.value<input type='text' data-value.="uchild.value">
+			.uchild.value<input type='text' data-value.=".uchild.value">
+			.vchild.value.a<input type='text' data-value.=".vchild.value.a">
+			vchild.value.a<input type='text' data-value.="vchild.value.a">
 		</div>
 		root1.child as asChild; root2.child as asChild2: 
 		<div data-bind.="root1.child as asChild; root2.child as asChild2">
-			.value<input type='text' data-bind.=".value">
-			asChild.value<input type='text' data-bind.="asChild.value">
-			asChild2.value<input type='text' data-bind.="asChild2.value">
-			.uchild.value<input type='text' data-bind.=".uchild.value">
-			vchild.value.a<input type='text' data-bind.="vchild.value.a">
-			root2.child.value<input type='text' data-bind.="root2.child.value">
-			root2.value<input type='text' data-bind.="root2.value">
+			.value<input type='text' data-value.=".value">
+			asChild.value<input type='text' data-value.="asChild.value">
+			asChild2.value<input type='text' data-value.="asChild2.value">
+			.uchild.value<input type='text' data-value.=".uchild.value">
+			vchild.value.a<input type='text' data-value.="vchild.value.a">
+			root2.child.value<input type='text' data-value.="root2.child.value">
+			root2.value<input type='text' data-value.="root2.value">
 		</div>
 		
 	</div>
 	root2
 	<div data-bind.="root2">
 		root2.value: 
-		<div data-bind.="root2.value"></div>
+		<div data-html.="root2.value"></div>
 		.child: 
 		<div data-bind.=".child">
-			.value<input type='text' data-bind.=".value">
+			.value<input type='text' data-value.=".value">
 		</div>
 	</div>
 	root3 as R
 	<div data-bind.="root3 as R; root2 as R2">
 		R.value: 
-		<div data-bind.="R.value"></div>
+		<div data-text.="R.value"></div>
 		.value: 
-		<div data-bind.=".value"></div>
+		<div data-text.=".value"></div>
 		R.child: 
 		<div data-bind.="R.child">
-			R2.child.value<input type='text' data-bind.="R2.child.value">
-			R.child.value<input type='text' data-bind.="R.child.value">
+			R2.child.value<input type='text' data-value.="R2.child.value">
+			R.child.value<input type='text' data-value.="R.child.value">
 		</div>
-		root1.child.value<input type='text' data-bind.="root1.child.value">
+		root1.child.value<input type='text' data-value.="root1.child.value">
 	</div>
 	
 	<script type="text/cj-template" id="template1">
-		<div>TEMPLATE<div data-bind.="r.value">INNER TEMPLATE</div><div data-bind.="c.value"></div>
+		<div>TEMPLATE<div data-text.="r.value">INNER TEMPLATE</div><div data-html.="c.value"></div>
 	</script>
 	
 	<script>

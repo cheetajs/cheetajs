@@ -24,13 +24,14 @@ $cheeta.compiler = {
 						attrName = attrName.substring('data-'.length);
 					}
 					var directive = $cheeta.directives[attrName] || $cheeta.directives[''];
-					parentModels = (directive(attr.value, elem, parentModels) || []).concat(parentModels);
+					parentModels = (directive(elem, attr, parentModels, attrName) || []).concat(parentModels);
 				}
 			}
 		}
 		return parentModels;
 	},
 	compile: function() {
+		$cheeta.futureEvals = [];
 		scripts = document.getElementsByTagName('script');
 		for (var i = 0; i < scripts.length; i++) {
 			var script = scripts[i];
@@ -45,10 +46,3 @@ $cheeta.compiler = {
 		}
 	}
 };
-
-$cheeta.onload = function() {
-	$cheeta.compiler.compile();
-	$cheeta.location.init();
-};
-
-window.addEventListener('load', $cheeta.onload, false);

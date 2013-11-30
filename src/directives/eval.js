@@ -1,5 +1,5 @@
 $cheeta.futureEvals = [];
 
-$cheeta.directives['eval'] = function(def) {
-	$cheeta.futureEvals.push(def);
+$cheeta.directives['eval'] = function(elem, attr) {
+	$cheeta.futureEvals.push(attr.value);
 };

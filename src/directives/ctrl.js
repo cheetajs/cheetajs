@@ -1,5 +1,5 @@
-$cheeta.directives['ctrl'] = $cheeta.directives['bind'] = function(def, elem, parentModels) {
-	var defs = def.split(/ *; */g);
+$cheeta.directives['ctrl'] = $cheeta.directives['bind'] = function(elem, attr, parentModels) {
+	var defs = attr.value.split(/ *; */g);
 	var models = [];
 	
 	for (var i = 0; i < defs.length; i++) {
@@ -8,11 +8,19 @@ $cheeta.directives['ctrl'] = $cheeta.directives['bind'] = function(def, elem, pa
 		var name = split[0];
 		var as = split.length > 1 ? split[1] : null;
 
-		models.push($cheeta.model.bind(parentModels, name, {
-				elem: elem,
-				attr: 'ctrl', 
-				as: as
-			}));
+		var binding = {
+			elem: elem,
+			attr: 'ctrl', 
+			as: as, 
+		};
+		if (elem.getAttribute('data-__for.') != null) {
+			binding.update = function(val) {
+				if (val == undefined) {
+					this.elem.parentNode.removeChild(this.elem);
+				}
+			}
+		}
+		models.push($cheeta.model.bind(parentModels, name, binding));
 	}
 	return models;
 };
