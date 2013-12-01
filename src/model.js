@@ -5,7 +5,7 @@ $cheeta.model = {
 	Model: function(parent, name) {
 		return {
 			__children: {},
-			__value: null,
+			__value: undefined,
 			__bindings: {},
 			__name: name,
 			__parent: parent,
@@ -76,9 +76,8 @@ $cheeta.model = {
 	bindElement: function(parent, modelName, binding) {
 		var model = parent.__children[modelName];
 		if (model == null) {
-			model = new this.Model(parent, name);
+			model = new this.Model(parent, modelName);
 			parent.__children[modelName] = model;
-			model.__name = modelName;
 		}
 		if (binding != null) {
 			var bindName = binding.as || modelName;
@@ -151,10 +150,8 @@ $cheeta.model = {
 			parentModel = parentModels[j];
 			parentModel = (function findParentModel(model, rootName) {
 				while (model != $cheeta.model.root) {
-					for (var key in model.__bindings) {
-						if (key == rootName) {
-							return model;
-						}
+					if (rootName == model.__name || model.__bindings[rootName] != null) {
+						return model;
 					}
 					model = model.__parent;
 				}

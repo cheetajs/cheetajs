@@ -10,6 +10,7 @@ div {
 </head>
 <body data-init.="root3.value = 99">
 	<div data-text.="root.child.value"></div>
+	root1 as r; root3.child as c
 	<div data-template.="template1" data-ctrl.="root1 as r; root3.child as c"></div>
 	root1:
 	<div data-ctrl.="root1; root3 as r3" data-init.=".aa = 'xxxx'">
@@ -80,7 +81,8 @@ div {
 	</div>
 	
 	<script type="text/cj-template" id="template1">
-		<div>TEMPLATE<div data-text.="r.value">INNER TEMPLATE</div><div data-html.="c.value"></div>
+		<div>TEMPLATE r.value <div data-text.="r.value">INNER TEMPLATE</div> c.value <div data-html.="c.value"></div>
+		<br/>c.value + r.value <span text.="c.value + r.value"></span>
 	</script>
 	
 	<script>

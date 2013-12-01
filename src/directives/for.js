@@ -34,7 +34,7 @@ $cheeta.directives['for'] = function(elem, attr, parentModels, baseAttrName) {
 					clone.setAttribute('bind.', arrayName + '.' + i + ' as ' + arrayVar + (oldBind.length > 0 ? ';' + oldBind : ''));
 					clone.style.display = '';
 					elem.parentNode.insertBefore(clone, this.elem);
-					$cheeta.compiler.recursiveCompile(this.__parentModels, clone, true);
+					$cheeta.compiler.compileElem(this.__parentModels, clone, true);
 				}
 			} 
 			//TODO splice with the same size
