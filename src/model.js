@@ -92,9 +92,9 @@ $cheeta.model = {
 				}
 			}
 			Object.defineProperty(parent, modelName, {
-				get length() {
-					return this.__children[modelName].__value.length;
-		        },
+//				get length() {
+//					return this.__children[modelName].__value.length;
+//		        },
 		        set: function(val) {
 		        	var m = this.__children[modelName];
 	        		if (!(val instanceof Object) && $cheeta.model.hasChildren(m) && val != null) {
@@ -111,11 +111,11 @@ $cheeta.model = {
 				}, 
 				get: function() {
 		        	var m = this.__children[modelName];
-		        	if (m.__value == null || m.__value instanceof Object) {
-		        		return m;
-		        	} else {
+//		        	if (m.__value == null || m.__value instanceof Object) {
+//		        		return null;
+//		        	} else {
 		        		return m.__value;
-		        	}
+//		        	}
 				},
 				enumerable: true,
 				configurable: true
@@ -164,7 +164,7 @@ $cheeta.model = {
 			}
 		}
 		for (var i = parentModel == $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
-			if (parentModel[split[i]] == null) {
+			if (parentModel.__children[split[i]] == null) {
 				if (this.bindElement(parentModel, split[i], binding == null ? null : {
 						elem: binding.elem, 
 						attr: 'bind'
@@ -172,7 +172,7 @@ $cheeta.model = {
 					return null;
 				}
 			}
-			parentModel = parentModel[split[i]];
+			parentModel = parentModel.__children[split[i]];
 		}
 		return this.bindElement(parentModel, name, binding);
 	}

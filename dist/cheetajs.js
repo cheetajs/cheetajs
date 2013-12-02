@@ -92,9 +92,9 @@ $cheeta.model = {
 				}
 			}
 			Object.defineProperty(parent, modelName, {
-				get length() {
-					return this.__children[modelName].__value.length;
-		        },
+//				get length() {
+//					return this.__children[modelName].__value.length;
+//		        },
 		        set: function(val) {
 		        	var m = this.__children[modelName];
 	        		if (!(val instanceof Object) && $cheeta.model.hasChildren(m) && val != null) {
@@ -111,11 +111,11 @@ $cheeta.model = {
 				}, 
 				get: function() {
 		        	var m = this.__children[modelName];
-		        	if (m.__value == null || m.__value instanceof Object) {
-		        		return m;
-		        	} else {
+//		        	if (m.__value == null || m.__value instanceof Object) {
+//		        		return null;
+//		        	} else {
 		        		return m.__value;
-		        	}
+//		        	}
 				},
 				enumerable: true,
 				configurable: true
@@ -164,7 +164,7 @@ $cheeta.model = {
 			}
 		}
 		for (var i = parentModel == $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
-			if (parentModel[split[i]] == null) {
+			if (parentModel.__children[split[i]] == null) {
 				if (this.bindElement(parentModel, split[i], binding == null ? null : {
 						elem: binding.elem, 
 						attr: 'bind'
@@ -172,7 +172,7 @@ $cheeta.model = {
 					return null;
 				}
 			}
-			parentModel = parentModel[split[i]];
+			parentModel = parentModel.__children[split[i]];
 		}
 		return this.bindElement(parentModel, name, binding);
 	}
@@ -437,6 +437,9 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 				baseAttrName: baseAttrName,
 				update: function(model) {
 					var val = eval(this.elem.getAttribute(this.attr.name));
+					if (val instanceof Object){
+						return;
+					}
 					if (this.baseAttrName === 'text') {
 						this.elem.innerHTML = '';
 						this.elem.appendChild(document.createTextNode(val));
@@ -453,7 +456,7 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 				}
 			};
 		var model = $cheeta.model.bind(parentModels, name, binding);
-		if (model != null && model.__value != undefined && binding != null) {
+		if (binding != null) {
 			$cheeta.futureUpdates.push({binding: binding, model: model});
 		}
 		return model != null ? $cheeta.model.toExpr(model) : name;

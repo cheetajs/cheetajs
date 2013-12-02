@@ -56,6 +56,9 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 				baseAttrName: baseAttrName,
 				update: function(model) {
 					var val = eval(this.elem.getAttribute(this.attr.name));
+					if (val instanceof Object){
+						return;
+					}
 					if (this.baseAttrName === 'text') {
 						this.elem.innerHTML = '';
 						this.elem.appendChild(document.createTextNode(val));
@@ -72,7 +75,7 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 				}
 			};
 		var model = $cheeta.model.bind(parentModels, name, binding);
-		if (model != null && model.__value != undefined && binding != null) {
+		if (binding != null) {
 			$cheeta.futureUpdates.push({binding: binding, model: model});
 		}
 		return model != null ? $cheeta.model.toExpr(model) : name;

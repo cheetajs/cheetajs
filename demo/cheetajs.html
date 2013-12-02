@@ -9,7 +9,8 @@ div {
 </style>
 </head>
 <body data-init.="root3.value = 99"  style=".value: 12">
-	<div data-text.="location.href"></div>
+	href<div data-text.="location.href == root3.value"></div>
+	href<div data-text.="window.location.href == 'd'"></div>
 	<div data-text.="root.child.value"></div>
 	root1 as r; root3.child as c
 	<div data-template.="template1" data-ctrl.="root1 as r; root3.child as c"></div>
