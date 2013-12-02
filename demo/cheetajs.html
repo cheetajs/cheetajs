@@ -8,7 +8,8 @@ div {
 }
 </style>
 </head>
-<body data-init.="root3.value = 99">
+<body data-init.="root3.value = 99"  style=".value: 12">
+	<div data-text.="location.href"></div>
 	<div data-text.="root.child.value"></div>
 	root1 as r; root3.child as c
 	<div data-template.="template1" data-ctrl.="root1 as r; root3.child as c"></div>
@@ -82,7 +83,7 @@ div {
 	
 	<script type="text/cj-template" id="template1">
 		<div>TEMPLATE r.value <div data-text.="r.value">INNER TEMPLATE</div> c.value <div data-html.="c.value"></div>
-		<br/>c.value + r.value <span text.="c.value + r.value"></span>
+		<br/>c.value + r.value <span text.="c.value + r.value"></span> <div html.="r.value > 10 ? 'more tham 10' : (r.value < 10 ? 'less than 10': 'equal to 10')"></div>
 	</script>
 	
 	<script>

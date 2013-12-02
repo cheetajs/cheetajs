@@ -10,10 +10,10 @@ $cheeta.directives['for'] = function(elem, attr, parentModels, baseAttrName) {
 		arrayVar: arrayVar,
 		arrayName: name,
 		as: as,
-		update: function(oldLen, newLen) {
-			if (oldLen instanceof Object) {
-				newLen = oldLen.length;
-				oldLen = 0;
+		update: function(newLen, oldLen) {
+			if (newLen instanceof Object || oldLen instanceof Object) {
+				newLen = newLen == null ? 0 : newLen.length;
+				oldLen = oldLen == null ? 0 : oldLen.length;
 			}
 			if (oldLen > newLen) { 
 				for (var i = oldLen - 1; i >= newLen; i--) { 

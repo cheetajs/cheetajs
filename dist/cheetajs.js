@@ -3,23 +3,18 @@ window['$cheeta'] = $cheeta;
 
 $cheeta.model = { 
 	Model: function(parent, name) {
-		return {
-			__children: {},
-			__value: undefined,
-			__bindings: {},
-			__name: name,
-			__parent: parent,
-			get length() {
-				return this.__value == null ? 0 : this.__value.length;
-			},
-		};
+		this.__children = {};
+		this.__value = undefined;
+		this.__bindings = {};
+		this.__name = name;
+		this.__parent = parent;
 	},
 	arrayModel: {
 		push: function() {
 			var len = this.__value.length;
 			this.__value.push.apply(this.__value, arguments);
 			var newLen = this.__value.length;
-			$cheeta.model.update(this, len, newLen);
+			$cheeta.model.update(this, newLen, len);
 			for (var i = len; i < newLen; i++) {
 				this[i] = this.__value[i];
 			}
@@ -28,13 +23,13 @@ $cheeta.model = {
 			var len = this.__value.length;
 			this.__value.pop.apply(this.__value, arguments);
 			var newLen = this.__value.length;
-			$cheeta.model.update(this, len, newLen);
+			$cheeta.model.update(this, newLen, len);
 		},
 		splice: function() {
 			var len = this.__value.length;
 			this.__value.splice.apply(this.__value, arguments);
 			var newLen = this.__value.length;
-			$cheeta.model.update(this, len, newLen);
+			$cheeta.model.update(this, newLen, len);
 			for (var i = 0; i < this.__value.length; i++) {
 				if (this[i] != this.__value[i])
 				this[i] = this.__value[i];
@@ -45,6 +40,7 @@ $cheeta.model = {
 		for (var key in this.arrayModel) {
 			model[key] = this.arrayModel[key];
 		}
+		Object.defineProperty(model, 'length', {get: function() {return this.__value.length}});
 		return model;
 	},
 	update: function(model, val, oldVal) {
@@ -88,7 +84,12 @@ $cheeta.model = {
 		}
 		if (parent[modelName] === undefined) {
 			if (parent.__parent == null) {
-				window[modelName] = model;
+				if (window[modelName] !== undefined) {
+					parent.__children[modelName] = undefined;
+					return null;
+				} else {
+					window[modelName] = model;
+				}
 			}
 			Object.defineProperty(parent, modelName, {
 				get length() {
@@ -164,10 +165,12 @@ $cheeta.model = {
 		}
 		for (var i = parentModel == $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
 			if (parentModel[split[i]] == null) {
-				this.bindElement(parentModel, split[i], binding == null ? null : {
-					elem: binding.elem, 
-					attr: 'bind'
-				})
+				if (this.bindElement(parentModel, split[i], binding == null ? null : {
+						elem: binding.elem, 
+						attr: 'bind'
+					}) == null) {
+					return null;
+				}
 			}
 			parentModel = parentModel[split[i]];
 		}
@@ -223,7 +226,8 @@ $cheeta.compiler = {
 		for (var k = 0; k < attribs.length; k++) {
 			var attr = attribs[k];
 			if (attr.specified) {
-				if (attr.name.indexOf('.', attr.name.length - 1) !== -1) {
+				var index = attr.name.indexOf('.', attr.name.length - 1);
+				if (index !== -1) {
 					var attrName = attr.name.substring(0, attr.name.length - 1);
 					if (attrName.indexOf('data-') == 0) {
 						attrName = attrName.substring('data-'.length);
@@ -427,29 +431,29 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 	
 	var expr = this.parseExpr(attr.value, function(name) {
 		var binding = baseAttrName === 'init' ? null : 
-		{
-			elem: elem, 
-			attr: attr,
-			baseAttrName: baseAttrName,
-			update: function(model) {
-				var val = eval(this.elem.getAttribute(this.attr.name));
-				if (this.baseAttrName === 'text') {
-					this.elem.innerHTML = '';
-					this.elem.appendChild(document.createTextNode(val));
-				} else if (this.baseAttrName === 'html') {
-					this.elem.innerHTML = val;
-				} else {
-					if (this.baseAttrName === 'value') {
-						if (this.elem.value !== undefined) {
-							this.elem.value = val || null;
+			{
+				elem: elem, 
+				attr: attr,
+				baseAttrName: baseAttrName,
+				update: function(model) {
+					var val = eval(this.elem.getAttribute(this.attr.name));
+					if (this.baseAttrName === 'text') {
+						this.elem.innerHTML = '';
+						this.elem.appendChild(document.createTextNode(val));
+					} else if (this.baseAttrName === 'html') {
+						this.elem.innerHTML = val;
+					} else {
+						if (this.baseAttrName === 'value') {
+							if (this.elem.value !== undefined) {
+								this.elem.value = val || null;
+							}
 						}
+						this.elem.setAttribute(this.baseAttrName, val);
 					}
-					this.elem.setAttribute(this.baseAttrName, val);
 				}
-			}
-		};
+			};
 		var model = $cheeta.model.bind(parentModels, name, binding);
-		if (model.__value != undefined && binding != null) {
+		if (model != null && model.__value != undefined && binding != null) {
 			$cheeta.futureUpdates.push({binding: binding, model: model});
 		}
 		return model != null ? $cheeta.model.toExpr(model) : name;
@@ -480,10 +484,10 @@ $cheeta.directives['for'] = function(elem, attr, parentModels, baseAttrName) {
 		arrayVar: arrayVar,
 		arrayName: name,
 		as: as,
-		update: function(oldLen, newLen) {
-			if (oldLen instanceof Object) {
-				newLen = oldLen.length;
-				oldLen = 0;
+		update: function(newLen, oldLen) {
+			if (newLen instanceof Object || oldLen instanceof Object) {
+				newLen = newLen == null ? 0 : newLen.length;
+				oldLen = oldLen == null ? 0 : oldLen.length;
 			}
 			if (oldLen > newLen) { 
 				for (var i = oldLen - 1; i >= newLen; i--) { 

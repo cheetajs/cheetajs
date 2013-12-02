@@ -3,23 +3,18 @@ window['$cheeta'] = $cheeta;
 
 $cheeta.model = { 
 	Model: function(parent, name) {
-		return {
-			__children: {},
-			__value: undefined,
-			__bindings: {},
-			__name: name,
-			__parent: parent,
-			get length() {
-				return this.__value == null ? 0 : this.__value.length;
-			},
-		};
+		this.__children = {};
+		this.__value = undefined;
+		this.__bindings = {};
+		this.__name = name;
+		this.__parent = parent;
 	},
 	arrayModel: {
 		push: function() {
 			var len = this.__value.length;
 			this.__value.push.apply(this.__value, arguments);
 			var newLen = this.__value.length;
-			$cheeta.model.update(this, len, newLen);
+			$cheeta.model.update(this, newLen, len);
 			for (var i = len; i < newLen; i++) {
 				this[i] = this.__value[i];
 			}
@@ -28,13 +23,13 @@ $cheeta.model = {
 			var len = this.__value.length;
 			this.__value.pop.apply(this.__value, arguments);
 			var newLen = this.__value.length;
-			$cheeta.model.update(this, len, newLen);
+			$cheeta.model.update(this, newLen, len);
 		},
 		splice: function() {
 			var len = this.__value.length;
 			this.__value.splice.apply(this.__value, arguments);
 			var newLen = this.__value.length;
-			$cheeta.model.update(this, len, newLen);
+			$cheeta.model.update(this, newLen, len);
 			for (var i = 0; i < this.__value.length; i++) {
 				if (this[i] != this.__value[i])
 				this[i] = this.__value[i];
@@ -45,6 +40,7 @@ $cheeta.model = {
 		for (var key in this.arrayModel) {
 			model[key] = this.arrayModel[key];
 		}
+		Object.defineProperty(model, 'length', {get: function() {return this.__value.length}});
 		return model;
 	},
 	update: function(model, val, oldVal) {
@@ -88,7 +84,12 @@ $cheeta.model = {
 		}
 		if (parent[modelName] === undefined) {
 			if (parent.__parent == null) {
-				window[modelName] = model;
+				if (window[modelName] !== undefined) {
+					parent.__children[modelName] = undefined;
+					return null;
+				} else {
+					window[modelName] = model;
+				}
 			}
 			Object.defineProperty(parent, modelName, {
 				get length() {
@@ -164,10 +165,12 @@ $cheeta.model = {
 		}
 		for (var i = parentModel == $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
 			if (parentModel[split[i]] == null) {
-				this.bindElement(parentModel, split[i], binding == null ? null : {
-					elem: binding.elem, 
-					attr: 'bind'
-				})
+				if (this.bindElement(parentModel, split[i], binding == null ? null : {
+						elem: binding.elem, 
+						attr: 'bind'
+					}) == null) {
+					return null;
+				}
 			}
 			parentModel = parentModel[split[i]];
 		}

@@ -50,29 +50,29 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 	
 	var expr = this.parseExpr(attr.value, function(name) {
 		var binding = baseAttrName === 'init' ? null : 
-		{
-			elem: elem, 
-			attr: attr,
-			baseAttrName: baseAttrName,
-			update: function(model) {
-				var val = eval(this.elem.getAttribute(this.attr.name));
-				if (this.baseAttrName === 'text') {
-					this.elem.innerHTML = '';
-					this.elem.appendChild(document.createTextNode(val));
-				} else if (this.baseAttrName === 'html') {
-					this.elem.innerHTML = val;
-				} else {
-					if (this.baseAttrName === 'value') {
-						if (this.elem.value !== undefined) {
-							this.elem.value = val || null;
+			{
+				elem: elem, 
+				attr: attr,
+				baseAttrName: baseAttrName,
+				update: function(model) {
+					var val = eval(this.elem.getAttribute(this.attr.name));
+					if (this.baseAttrName === 'text') {
+						this.elem.innerHTML = '';
+						this.elem.appendChild(document.createTextNode(val));
+					} else if (this.baseAttrName === 'html') {
+						this.elem.innerHTML = val;
+					} else {
+						if (this.baseAttrName === 'value') {
+							if (this.elem.value !== undefined) {
+								this.elem.value = val || null;
+							}
 						}
+						this.elem.setAttribute(this.baseAttrName, val);
 					}
-					this.elem.setAttribute(this.baseAttrName, val);
 				}
-			}
-		};
+			};
 		var model = $cheeta.model.bind(parentModels, name, binding);
-		if (model.__value != undefined && binding != null) {
+		if (model != null && model.__value != undefined && binding != null) {
 			$cheeta.futureUpdates.push({binding: binding, model: model});
 		}
 		return model != null ? $cheeta.model.toExpr(model) : name;

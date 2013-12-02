@@ -35,7 +35,8 @@ $cheeta.compiler = {
 		for (var k = 0; k < attribs.length; k++) {
 			var attr = attribs[k];
 			if (attr.specified) {
-				if (attr.name.indexOf('.', attr.name.length - 1) !== -1) {
+				var index = attr.name.indexOf('.', attr.name.length - 1);
+				if (index !== -1) {
 					var attrName = attr.name.substring(0, attr.name.length - 1);
 					if (attrName.indexOf('data-') == 0) {
 						attrName = attrName.substring('data-'.length);
