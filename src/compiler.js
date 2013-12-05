@@ -1,3 +1,31 @@
+$cheeta.directives = {
+	'*': []
+};
+
+$cheeta.directive = function(name, fn, order) {
+	if (fn == null) {
+		var directive = $cheeta.directives[name];
+		if (directive == null) {
+			var wildcards = $cheeta.directives['*']
+			for (var i = 0; i < wildcards.length; i++) {
+				if (name.indexOf(wildcards[i].name) == 0) {
+					directive = wildcards[i];
+					break;
+				}
+			}
+		}
+		return directive || (name.indexOf('.', name.length - 1) > -1 ? $cheeta.directive('') : null); 
+	}
+	var index = name.indexOf('*', name.length - 1);
+	if (index > -1) {
+		name = name.substring(0, name.length - 1);
+		$cheeta.directives['*'].push({name: 'data-' + name, fn: fn, order: order}, {name: name, fn: fn, order: order});
+		return $cheeta.directives['*'][1]; 
+	} else {
+		return $cheeta.directives['data-' + name] = $cheeta.directives[name] = {name: name, fn: fn, order: order || 10000};
+	}
+}
+
 $cheeta.compiler = {
 	recursiveCompile: function(parentModels, node, skipSiblings) {
 		if (node) {
@@ -19,34 +47,29 @@ $cheeta.compiler = {
 		this.recursiveCompile(parentModels, elem, skipSiblings)
 		this.runFutures();
 	},
-	findDirective: function(elem, directive) {
-		return elem.getAttribute(directive + '.') || elem.getAttribute('data-' + directive + '.');
-	},
 	compileDirectives: function(parentModels, elem) {
 		var attribs = [];
 		for (var k = 0; k < elem.attributes.length; k++) {
 			var attr = elem.attributes[k];
-			attribs.push(attr);
+			if (attr.specified) {
+				attribs.push(attr);
+			}
 		}
 		//ordering the directives 'bind'/'ctrl' > 'for' > 'template'
 		attribs = attribs.sort(function(a, b) {
-			return (a.name > b.name) ? 1 : -1; 
+			function order(d) {
+				return d == null ? $cheeta.directive('').order : d.order;  
+			}
+			return order($cheeta.directive(a.name)) - order($cheeta.directive(b.name));
 		});
 		for (var k = 0; k < attribs.length; k++) {
 			var attr = attribs[k];
-			if (attr.specified) {
-				var index = attr.name.indexOf('.', attr.name.length - 1);
-				if (index !== -1) {
-					var attrName = attr.name.substring(0, attr.name.length - 1);
-					if (attrName.indexOf('data-') == 0) {
-						attrName = attrName.substring('data-'.length);
-					}
-					if (attrName === 'for') {
-						elem.__isFor_ = true;
-					}
-					var directive = $cheeta.directives[attrName] || $cheeta.directives[''];
-					parentModels = (directive(elem, attr, parentModels, attrName) || []).concat(parentModels);
-				}
+			var directive = $cheeta.directive(attr.name);
+			if (directive != null) {
+				parentModels = (directive.fn(elem, attr, parentModels) || []).concat(parentModels);				
+			}
+			if (elem.__isFor_) {
+				break;
 			}
 		}
 		return parentModels;

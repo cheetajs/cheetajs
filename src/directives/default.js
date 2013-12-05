@@ -1,7 +1,8 @@
 $cheeta.futureEvals = [];
 $cheeta.futureUpdates = []
 
-$cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
+$cheeta.directive('', function(elem, attr, parentModels) {
+	var baseAttrName = attr.name.substring(attr.name.indexOf('data-') == 0 ? 5 : 0, attr.name.length - 1);
 	this.parseExpr = function(val, bindAndResolve) {
 		var quote = null, regexpMod = false, result = '', index = -1, models = [];
 		val = val + '\x1a';
@@ -55,15 +56,18 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 				attr: attr,
 				baseAttrName: baseAttrName,
 				update: function(model) {
-					var val = eval(this.elem.getAttribute(this.attr.name));
+					var val = null;
+					try {
+						val = eval(this.elem.getAttribute(this.attr.name));
+					} catch (e) {}
 					if (val instanceof Object){
 						return;
 					}
 					if (this.baseAttrName === 'text') {
 						this.elem.innerHTML = '';
-						this.elem.appendChild(document.createTextNode(val));
+						this.elem.appendChild(document.createTextNode(val || ''));
 					} else if (this.baseAttrName === 'html') {
-						this.elem.innerHTML = val;
+						this.elem.innerHTML = val || '';
 					} else {
 						if (this.baseAttrName === 'value') {
 							if (this.elem.value !== undefined) {
@@ -86,4 +90,4 @@ $cheeta.directives[''] = function(elem, attr, parentModels, baseAttrName) {
 	}
 	
 	elem.setAttribute(attr.name, expr);
-};
+}, 600);

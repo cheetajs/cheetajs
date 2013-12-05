@@ -1,54 +1,75 @@
 var $cheeta = {};
 window['$cheeta'] = $cheeta;
 
-$cheeta.model = { 
+$cheeta.model = {
 	Model: function(parent, name) {
-		this.__children = {};
 		this.__value = undefined;
 		this.__bindings = {};
-		this.__name = name;
 		this.__parent = parent;
+		this.__name = name;
 	},
-	arrayModel: {
-		push: function() {
-			var len = this.__value.length;
-			this.__value.push.apply(this.__value, arguments);
-			var newLen = this.__value.length;
-			$cheeta.model.update(this, newLen, len);
-			for (var i = len; i < newLen; i++) {
-				this[i] = this.__value[i];
+	ArrayInterceptor: function() {
+		var origPush = [].push;
+		var origPop = [].pop;
+		var origSplice = [].splice;
+		var update = function(array, newLen, len) {
+			for (var i = 0; i < array.__cheetaUpdateInterceptors_.length; i++) {
+				array.__cheetaUpdateInterceptors_[i].apply(array, [newLen, len]);
 			}
-		},
-		pop: function() {
-			var len = this.__value.length;
-			this.__value.pop.apply(this.__value, arguments);
-			var newLen = this.__value.length;
-			$cheeta.model.update(this, newLen, len);
-		},
-		splice: function() {
-			var len = this.__value.length;
-			this.__value.splice.apply(this.__value, arguments);
-			var newLen = this.__value.length;
-			$cheeta.model.update(this, newLen, len);
-			for (var i = 0; i < this.__value.length; i++) {
-				if (this[i] != this.__value[i])
-				this[i] = this.__value[i];
-			}
+		};
+		return {
+			push: function() {
+				this.updates = [];
+				var u = [];
+				var len = this.length;
+				var result = origPush.apply(this, arguments);
+				var newLen = this.length;
+				update(this, newLen, len);
+				for (var i = len; i < newLen; i++) {
+					this[i] = this.__value[i];
+				}
+				return result;
+			},
+			pop: function() {
+				var len = this.length;
+				var result = origPop.apply(this, arguments);
+				var newLen = this.length;
+				update(this, newLen, len);
+				return result;
+			},
+			splice: function() {
+				var len = this.length;
+				var result = origSplice.apply(this, arguments);
+				var newLen = this.length;
+				update(this, newLen, len);
+				for (var i = 0; i < this.length; i++) {
+					if (this[i] != this.__value[i])
+					this[i] = this[i];
+				}
+				return result;
+			}, 
+			__cheetaUpdateInterceptors_: []
+			//TODO splice with the same length
 		}
 	},
-	extendArray: function(model) {
-		for (var key in this.arrayModel) {
-			model[key] = this.arrayModel[key];
+	interceptArray: function(array, update) {
+		if (!array.__cheetaUpdateInterceptors_) {
+			interceptor = new this.ArrayInterceptor();
+			for (var key in interceptor) {
+				array[key] = interceptor[key];
+			}
 		}
-		Object.defineProperty(model, 'length', {get: function() {return this.__value.length}});
-		return model;
+		array.__cheetaUpdateInterceptors_.push(update);
+		return array;
 	},
 	update: function(model, val, oldVal) {
 		for (var name in model.__bindings) {
 			var bindings = model.__bindings[name];
 			for (var i = 0; i < bindings.length; i++) {
 				var binding = bindings[i];
-				binding.update(val, oldVal);
+				if (binding.update) {
+					binding.update(val, oldVal);
+				}
 			}
 		}
 	},
@@ -63,76 +84,69 @@ $cheeta.model = {
 		delete this.__parent.__children[i];  
 		delete this.__parent[i]; 
 	},
-	hasChildren: function(model) {
-		for (var key in model.__children) {
-			return true || key;
-		}
-		return false;
-	},
-	bindElement: function(parent, modelName, binding) {
-		var model = parent.__children[modelName];
-		if (model == null) {
-			model = new this.Model(parent, modelName);
-			parent.__children[modelName] = model;
-		}
-		if (binding != null) {
-			var bindName = binding.as || modelName;
-			if (model.__bindings[bindName] == null) {
-				model.__bindings[bindName] = [];
-			}
-			model.__bindings[bindName].push(binding);
-		}
-		if (parent[modelName] === undefined) {
-			if (parent.__parent == null) {
-				if (window[modelName] !== undefined) {
-					parent.__children[modelName] = undefined;
+	bindElement: function(parent, name, binding) {
+		console.log('bind element: ', parent, name, binding);
+		if (parent[name] === undefined) {
+			parent[name] = new $cheeta.model.Model();
+			if (parent === this.root) {
+				if (window[name] !== undefined) {
+					parent[name] = undefined;
 					return null;
-				} else {
-					window[modelName] = model;
 				}
+				this.interceptProp(parent[name], window, name);
 			}
-			Object.defineProperty(parent, modelName, {
-//				get length() {
-//					return this.__children[modelName].__value.length;
-//		        },
+		}
+		var model = parent[name];
+		var bindName = binding.as || name;
+		if (model.__bindings[bindName] == null) {
+			model.__bindings[bindName] = [];
+		}
+		model.__bindings[bindName].push(binding);
+		model.__name = name;
+		model.__parent = parent;
+		return model;
+	},
+	interceptProp: function(model, value, name) {
+		console.log('intercepting: ', value, name);
+		if (value != null) {
+			//model.__value = value[name];
+			Object.defineProperty(value, name, {
 		        set: function(val) {
-		        	var m = this.__children[modelName];
-	        		if (!(val instanceof Object) && $cheeta.model.hasChildren(m) && val != null) {
-	        			throw 'Cannot set primitive value for model ' + modelName;
-	        		}
-	        		var prevVal = m.__value;
-	        		m.__value = val;
-	        		$cheeta.model.update(m, val, prevVal);
+		        	var prevVal = model.__value;
+		        	if (prevVal != val) {
+		        		model.__value = val;
+		        	}
+	        		$cheeta.model.update(model, val, prevVal);
 		        	if (val instanceof Object) {
 						for (var key in val) {
-							m[key] = val[key];
+							if (model[key] != null) {
+								var origVal = val[key];
+								$cheeta.model.interceptProp(model[key], val, key);
+								val[key] = origVal;
+							}
 						}
 		        	}
 				}, 
 				get: function() {
-		        	var m = this.__children[modelName];
-//		        	if (m.__value == null || m.__value instanceof Object) {
-//		        		return null;
-//		        	} else {
-		        		return m.__value;
-//		        	}
+		        	return model.__value;
 				},
 				enumerable: true,
 				configurable: true
 			});
 		}
-		return model;
 	},
 	toExpr: function(model) {
-		var expr = '.' + model.__name, m = model.__parent;
-		while (m.__parent != null && m.__name != null) {
-			expr = (m.__name.charAt(0) >= '0' && m.__name.charAt(0) <= '9'? '[' + m.__name + ']' : '.' + m.__name) + expr;
-			m = m.__parent;
+		var expr = '';
+		while (model.__parent != null && model.__name != null) {
+			var ch = model.__name.charAt(0);
+			expr = (ch >= '0' &&  ch <= '9' ? '[' + model.__name + ']' : '.' + model.__name) + expr;
+			model = model.__parent;
 		}
 		
 		return expr.substring(1);
 	},
 	bind: function(parentModels, name, binding) {
+		console.log('binding: ', name, binding);
 		if (name.charAt(0) === '.') {
 			// bind dot-starting to the first parent
 			for (key in parentModels[0].__bindings) {
@@ -163,29 +177,36 @@ $cheeta.model = {
 				break;
 			}
 		}
-		for (var i = parentModel == $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
-			if (parentModel.__children[split[i]] == null) {
-				if (this.bindElement(parentModel, split[i], binding == null ? null : {
-						elem: binding.elem, 
-						attr: 'bind'
-					}) == null) {
-					return null;
+		if (split.length == 1 && parentModel !== $cheeta.model.root) {
+			name = parentModel.__name;
+			parentModel = parentModel.__parent;
+		} else {
+			for (var i = parentModel === $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
+				if (parentModel[split[i]] == null) {
+					if (this.bindElement(parentModel, split[i], binding == null ? null : {
+							elem: binding.elem, 
+							attr: 'bind'
+						}) == null) {
+						return null;
+					}
 				}
+				parentModel = parentModel[split[i]];
 			}
-			parentModel = parentModel.__children[split[i]];
 		}
 		return this.bindElement(parentModel, name, binding);
 	}
 };
 
-$cheeta.model.root = new $cheeta.model.Model(null, "ROOT");
-
-
-$cheeta.directives = [];
+$cheeta.model.root = new $cheeta.model.Model(null);
+$cheeta.model.root.__value = window;
 
 $cheeta.onload = function() {
 	$cheeta.compiler.compile();
 	$cheeta.location.init();
 };
+
+$cheeta.init = function() {
+	
+}
 
 window.addEventListener('load', $cheeta.onload, false);

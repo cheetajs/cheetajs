@@ -57,7 +57,6 @@ div {
 			root2.child.value<input type='text' data-value.="root2.child.value">
 			root2.value<input type='text' data-value.="root2.value">
 		</div>
-		
 	</div>
 	root2
 	<div data-bind.="root2">
@@ -89,6 +88,36 @@ div {
 	
 	<script>
 	setTimeout(function() {
+		app1 = {
+			about: {
+				firstName: 'Danial1',
+				lastName: 'Farid1',
+				cars: ['Ferrari', 'Porche'],
+				work: {
+					org: 'free-lance',
+					position: {
+						title: 'software engineer',
+						salary: '100K'
+					}
+				}
+			},
+			projects: [
+				'github': ['angular-file-upload', 'cheetajs'],
+				'googlecode': ['gwt-annotation'],
+				'others': [{
+					site: 'cheetaj.com',
+					projectName: 'cheetaj'
+				}, {
+					site: 'cheetaj2.com',
+					projectName: 'cheetaj2'
+				}]
+			],
+			contact: {
+				tel: '416-878-5070',
+				address: '832 Bay Street',
+				postalCode: 'M5S 1Z6'
+			}
+		}
 		uchild.value = 8
 		vchild.value.a = 7
 		root2.child.value = 6
