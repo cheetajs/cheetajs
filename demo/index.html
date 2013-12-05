@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../dist/cheetajs.js"></script>
+<style type="text/css">
+div {
+	margin-left: 10px;
+}
+</style>
+</head>
+<body data-ctrl.='app1'>
+	<div data-ctrl.='.about'>
+		<div data-html.='.firstName'></div>
+		<input type='text' data-value.='.lastName'>
+		<div data-html.='.lastName'></div>
+		Cars: 
+		<ul>
+			<li data-for.="car in .cars" >
+				<div data-text.="car"></div>
+			</li>
+		</ul>
+		<div>
+			Organization: <div data-text.=".work.org"></div>
+			Position: 
+			<div data-model.='.work.position'>
+				Title: <span data-text.=".title"></span> Salary: <span data-text.=".salary"></span>
+			</div>
+		</div>
+	</div>
+
+	<script type="text/cj-template" id="template1">
+		<div>TEMPLATE r.value <div data-text.="r.value">INNER TEMPLATE</div> c.value <div data-html.="c.value"></div>
+		<br/>c.value + r.value <span text.="c.value + r.value"></span> <div html.="r.value > 10 ? 'more tham 10' : (r.value < 10 ? 'less than 10': 'equal to 10')"></div>
+	</script>
+	
+	<script>
+	setTimeout(function() {
+		app1 = {
+			about: {
+				firstName: 'Danial1',
+				lastName: 'Farid1',
+				cars: ['Ferrari', 'Porche'],
+				work: {
+					org: 'free-lance',
+					position: {
+						title: 'software engineer',
+						salary: '100K'
+					}
+				}
+			},
+			projects: {
+				'github': ['angular-file-upload', 'cheetajs'],
+				'googlecode': ['gwt-annotation'],
+				'others': [{
+					site: 'cheetaj.com',
+					projectName: 'cheetaj'
+				}, {
+					site: 'cheetaj2.com',
+					projectName: 'cheetaj2'
+				}]
+			},
+			contact: {
+				tel: '416-878-5070',
+				address: '832 Bay Street',
+				postalCode: 'M5S 1Z6'
+			}
+		}
+	}, 1000);
+	$cheeta.location.watch(function(hash) {
+		console.log('path is changed', hash);
+	});
+	$cheeta.location.watch('myName', function(val, oldVal) {
+		console.log('name is changed', val, oldVal);
+	});
+	$cheeta.location.watch('myLastName', function(val, oldVal) {
+		console.log('last name is changed', val, oldVal);
+	});
+	$cheeta.location.watch('test', function(val, oldVal) {
+		console.log('test is changed', val, oldVal);
+	});
+	
+	setTimeout(function() {
+		window.location.hash = 'some/path/for/you';
+	}, 2000);
+	setTimeout(function() {
+		window.location.hash = 'some/path/for/you&myName=Danial&myLastName=&test=2';
+	}, 3000);
+	setTimeout(function() {
+		$cheeta.location.set('test', 5);
+		$cheeta.location.set('myLastName', 'lll');
+		$cheeta.location.set('another/path');
+	}, 4000);
+	</script>
+</body>
+</html>
