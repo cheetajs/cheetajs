@@ -14,13 +14,6 @@
 				attr: 'ctrl', 
 				as: as, 
 			};
-			if (elem.__isForElem_) {
-				binding.update = function(val) {
-					if (val == undefined) {
-						this.elem.parentNode.removeChild(this.elem);
-					}
-				}
-			}
 			models.push($cheeta.model.bind(parentModels, name, binding));
 		}
 		return models;

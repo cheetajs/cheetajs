@@ -8,59 +8,64 @@ $cheeta.model = {
 		this.__parent = parent;
 		this.__name = name;
 	},
-	ArrayInterceptor: function() {
-		var origPush = [].push;
-		var origPop = [].pop;
-		var origSplice = [].splice;
-		var update = function(array, newLen, len) {
-			for (var i = 0; i < array.__cheetaUpdateInterceptors_.length; i++) {
-				array.__cheetaUpdateInterceptors_[i].apply(array, [newLen, len]);
-			}
-		};
+	ArrayInterceptor: function(model) {
+		var model = model;
 		return {
 			push: function() {
-				this.updates = [];
-				var u = [];
 				var len = this.length;
-				var result = origPush.apply(this, arguments);
+				var result = Array.prototype.push.apply(this, arguments);
 				var newLen = this.length;
-				update(this, newLen, len);
+				$cheeta.model.update(model, newLen, len);
 				for (var i = len; i < newLen; i++) {
-					this[i] = this.__value[i];
+					model[i].__value = this[i];
+					$cheeta.model.interceptProp(model[i], this, i);
 				}
 				return result;
 			},
 			pop: function() {
 				var len = this.length;
-				var result = origPop.apply(this, arguments);
+				var result = Array.prototype.pop.apply(this, arguments);
 				var newLen = this.length;
-				update(this, newLen, len);
+				$cheeta.model.update(model, newLen, len);
 				return result;
 			},
-			splice: function() {
+			shift: function() {
 				var len = this.length;
-				var result = origSplice.apply(this, arguments);
+				var result = Array.prototype.shift.apply(this, arguments);
+				model.__parent.__value[model.__name] = this;
 				var newLen = this.length;
-				update(this, newLen, len);
-				for (var i = 0; i < this.length; i++) {
-					if (this[i] != this.__value[i])
-					this[i] = this[i];
+				$cheeta.model.update(model, newLen, len);
+				return result;
+			},
+			unshift: function() {
+				var len = this.length;
+				var result = Array.prototype.unshift.apply(this, arguments);
+				model.__parent.__value[model.__name] = this;
+				var newLen = this.length;
+				$cheeta.model.update(model, newLen, len);
+				return result;
+			},
+			splice: function(index, howmany) {
+				var len = this.length;
+				var result = Array.prototype.splice.apply(this, arguments);
+				var newLen = this.length;
+				$cheeta.model.update(model, newLen, len);
+				for (var i = len; i < newLen; i++) {
+					model[i].__value = this[i];
+					$cheeta.model.interceptProp(model[i], this, i);
 				}
 				return result;
-			}, 
-			__cheetaUpdateInterceptors_: []
-			//TODO splice with the same length
-		}
-	},
-	interceptArray: function(array, update) {
-		if (!array.__cheetaUpdateInterceptors_) {
-			interceptor = new this.ArrayInterceptor();
-			for (var key in interceptor) {
-				array[key] = interceptor[key];
 			}
 		}
-		array.__cheetaUpdateInterceptors_.push(update);
-		return array;
+	},
+	interceptArray: function(model) {
+		var interceptor = new this.ArrayInterceptor(model);
+		for (var key in interceptor) {
+			if (model.__value[key] == interceptor[key]) {
+				break;
+			}
+			model.__value[key] = interceptor[key];
+		}
 	},
 	update: function(model, val, oldVal) {
 		for (var name in model.__bindings) {
@@ -72,17 +77,6 @@ $cheeta.model = {
 				}
 			}
 		}
-	},
-	deleteChild: function(model) {
-		for (var name in model.__bindings) {
-			var bindings = model.__bindings[name];
-			for (var i = 0; i < bindings.length; i++) {
-				var binding = bindings[i];			
-				this.elem.parentNode.removeChild(this.elem);
-			}
-		}
-		delete this.__parent.__children[i];  
-		delete this.__parent[i]; 
 	},
 	bindElement: function(parent, name, binding) {
 		console.log('bind element: ', parent, name, binding);
@@ -115,6 +109,9 @@ $cheeta.model = {
 		        	var prevVal = model.__value;
 		        	if (prevVal != val) {
 		        		model.__value = val;
+		        		if (model.__isArray) {
+		        			$cheeta.model.interceptArray(model);
+		        		}
 		        	}
 	        		$cheeta.model.update(model, val, prevVal);
 		        	if (val instanceof Object) {

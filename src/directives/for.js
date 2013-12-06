@@ -13,12 +13,19 @@ $cheeta.directive('for.', function(elem, attr, parentModels, baseAttrName) {
 		as: as,
 		update: function(newLen, oldLen) {
 			if (newLen instanceof Object || oldLen instanceof Object) {
-				$cheeta.model.interceptArray(newLen, this.update);
+//				$cheeta.model.interceptArray(newLen, this.update);
 				newLen = newLen == null ? 0 : newLen.length;
 				oldLen = oldLen == null ? 0 : oldLen.length;
 			}
 			if (oldLen > newLen) { 
-				for (var i = oldLen - 1; i >= newLen; i--) { 
+				for (var i = oldLen - 1; i >= newLen; i--) {
+					for (var key in model[i].__bindings) {
+						var bindings = model[i].__bindings[key];
+						for (var k = 0; k < bindings.length; k++) {
+							var rmElem = bindings[k].elem;
+							rmElem.parentNode.removeChild(rmElem);
+						}
+					}
 					delete model[i];
 				}
 			} else if (oldLen < newLen) {
@@ -28,11 +35,10 @@ $cheeta.directive('for.', function(elem, attr, parentModels, baseAttrName) {
 					var clone = this.elem.cloneNode();
 					clone.removeAttribute('for.');
 					clone.removeAttribute('data-for.');
-					clone.__isForElem_ = true;
 					clone.setAttribute('model.', arrayName + '.' + i + ' as ' + arrayVar + 
 							(this.elem.getAttribute('model.') ? (';' + this.elem.getAttribute('model.').value) : '')); 
 					clone.style.display = '';
-					elem.parentNode.insertBefore(clone, this.elem);
+					this.elem.parentNode.insertBefore(clone, this.elem);
 					$cheeta.compiler.compileElem(this.__parentModels, clone, true);
 				}
 			}
@@ -44,6 +50,6 @@ $cheeta.directive('for.', function(elem, attr, parentModels, baseAttrName) {
 	binding.__parentModels = parentModels;
 
 	elem.style.display = 'none';
-
+	model.__isArray = true;
 	return [model];
 }, 100);
