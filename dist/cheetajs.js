@@ -3,10 +3,11 @@ window['$cheeta'] = $cheeta;
 
 $cheeta.model = {
 	Model: function(parent, name) {
-		this.__value = undefined;
-		this.__bindings = {};
-		this.__parent = parent;
-		this.__name = name;
+		this.value = undefined;
+		this.bindings = {};
+		this.parent = parent;
+		this.name = name;
+		this.children = {};
 	},
 	ArrayInterceptor: function(model) {
 		var model = model;
@@ -17,8 +18,8 @@ $cheeta.model = {
 				var newLen = this.length;
 				$cheeta.model.update(model, newLen, len);
 				for (var i = len; i < newLen; i++) {
-					model[i].__value = this[i];
-					$cheeta.model.interceptProp(model[i], this, i);
+					model.children[i].value = this[i];
+					$cheeta.model.interceptProp(model.children[i], this, i);
 				}
 				return result;
 			},
@@ -32,7 +33,7 @@ $cheeta.model = {
 			shift: function() {
 				var len = this.length;
 				var result = Array.prototype.shift.apply(this, arguments);
-				model.__parent.__value[model.__name] = this;
+				model.parent.value[model.name] = this;
 				var newLen = this.length;
 				$cheeta.model.update(model, newLen, len);
 				return result;
@@ -40,7 +41,7 @@ $cheeta.model = {
 			unshift: function() {
 				var len = this.length;
 				var result = Array.prototype.unshift.apply(this, arguments);
-				model.__parent.__value[model.__name] = this;
+				model.parent.value[model.name] = this;
 				var newLen = this.length;
 				$cheeta.model.update(model, newLen, len);
 				return result;
@@ -51,8 +52,8 @@ $cheeta.model = {
 				var newLen = this.length;
 				$cheeta.model.update(model, newLen, len);
 				for (var i = len; i < newLen; i++) {
-					model[i].__value = this[i];
-					$cheeta.model.interceptProp(model[i], this, i);
+					model.children[i].value = this[i];
+					$cheeta.model.interceptProp(model.children[i], this, i);
 				}
 				return result;
 			}
@@ -61,15 +62,15 @@ $cheeta.model = {
 	interceptArray: function(model) {
 		var interceptor = new this.ArrayInterceptor(model);
 		for (var key in interceptor) {
-			if (model.__value[key] == interceptor[key]) {
+			if (model.value[key] == interceptor[key]) {
 				break;
 			}
-			model.__value[key] = interceptor[key];
+			model.value[key] = interceptor[key];
 		}
 	},
 	update: function(model, val, oldVal) {
-		for (var name in model.__bindings) {
-			var bindings = model.__bindings[name];
+		for (var name in model.bindings) {
+			var bindings = model.bindings[name];
 			for (var i = 0; i < bindings.length; i++) {
 				var binding = bindings[i];
 				if (binding.update) {
@@ -78,54 +79,58 @@ $cheeta.model = {
 			}
 		}
 	},
-	bindElement: function(parent, name, binding) {
-		console.log('bind element: ', parent, name, binding);
-		if (parent[name] === undefined) {
-			parent[name] = new $cheeta.model.Model();
+	bindElement: function(parent, name, binding, isFn) {
+//		console.log('bind element: ', parent, name, binding);
+		var model = parent.children[name];
+		if (model === undefined) {
+			model = new $cheeta.model.Model();
+			model.name = name;
+			model.parent = parent;
+			if (isFn) {
+				return model;
+			}
 			if (parent === this.root) {
 				if (window[name] !== undefined) {
-					parent[name] = undefined;
+					parent.children[name] = undefined;
 					return null;
 				}
-				this.interceptProp(parent[name], window, name);
+				this.interceptProp(model, window, name);
 			}
+			parent.children[name] = model;
 		}
-		var model = parent[name];
-		var bindName = binding.as || name;
-		if (model.__bindings[bindName] == null) {
-			model.__bindings[bindName] = [];
+		if (binding != null) {
+			var bindName = binding.as || name;
+			if (model.bindings[bindName] == null) {
+				model.bindings[bindName] = [];
+			}
+			model.bindings[bindName].push(binding);
 		}
-		model.__bindings[bindName].push(binding);
-		model.__name = name;
-		model.__parent = parent;
 		return model;
 	},
 	interceptProp: function(model, value, name) {
 		console.log('intercepting: ', value, name);
 		if (value != null) {
-			//model.__value = value[name];
+			//model.value = value[name];
 			Object.defineProperty(value, name, {
 		        set: function(val) {
-		        	var prevVal = model.__value;
+		        	var prevVal = model.value;
 		        	if (prevVal != val) {
-		        		model.__value = val;
+		        		model.value = val;
 		        		if (model.__isArray) {
 		        			$cheeta.model.interceptArray(model);
 		        		}
 		        	}
 	        		$cheeta.model.update(model, val, prevVal);
 		        	if (val instanceof Object) {
-						for (var key in val) {
-							if (model[key] != null) {
-								var origVal = val[key];
-								$cheeta.model.interceptProp(model[key], val, key);
-								val[key] = origVal;
-							}
+						for (var key in model.children) {
+							var origVal = val[key];
+							$cheeta.model.interceptProp(model.children[key], val, key);
+							val[key] = origVal;
 						}
 		        	}
 				}, 
 				get: function() {
-		        	return model.__value;
+		        	return model.value;
 				},
 				enumerable: true,
 				configurable: true
@@ -134,19 +139,19 @@ $cheeta.model = {
 	},
 	toExpr: function(model) {
 		var expr = '';
-		while (model.__parent != null && model.__name != null) {
-			var ch = model.__name.charAt(0);
-			expr = (ch >= '0' &&  ch <= '9' ? '[' + model.__name + ']' : '.' + model.__name) + expr;
-			model = model.__parent;
+		while (model.parent != null && model.name != null) {
+			var ch = model.name.charAt(0);
+			expr = (ch >= '0' &&  ch <= '9' ? '[' + model.name + ']' : '.' + model.name) + expr;
+			model = model.parent;
 		}
 		
 		return expr.substring(1);
 	},
-	bind: function(parentModels, name, binding) {
+	bind: function(parentModels, name, binding, isFn) {
 		console.log('binding: ', name, binding);
 		if (name.charAt(0) === '.') {
 			// bind dot-starting to the first parent
-			for (key in parentModels[0].__bindings) {
+			for (key in parentModels[0].bindings) {
 				name = key + name;
 				break;
 			}
@@ -162,10 +167,10 @@ $cheeta.model = {
 			parentModel = parentModels[j];
 			parentModel = (function findParentModel(model, rootName) {
 				while (model != $cheeta.model.root) {
-					if (rootName == model.__name || model.__bindings[rootName] != null) {
+					if (rootName == model.name || model.bindings[rootName] != null) {
 						return model;
 					}
-					model = model.__parent;
+					model = model.parent;
 				}
 				return model;
 			})(parentModel, rootName);
@@ -175,11 +180,11 @@ $cheeta.model = {
 			}
 		}
 		if (split.length == 1 && parentModel !== $cheeta.model.root) {
-			name = parentModel.__name;
-			parentModel = parentModel.__parent;
+			name = parentModel.name;
+			parentModel = parentModel.parent;
 		} else {
 			for (var i = parentModel === $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
-				if (parentModel[split[i]] == null) {
+				if (parentModel.children[split[i]] == null) {
 					if (this.bindElement(parentModel, split[i], binding == null ? null : {
 							elem: binding.elem, 
 							attr: 'bind'
@@ -187,15 +192,15 @@ $cheeta.model = {
 						return null;
 					}
 				}
-				parentModel = parentModel[split[i]];
+				parentModel = parentModel.children[split[i]];
 			}
 		}
-		return this.bindElement(parentModel, name, binding);
+		return this.bindElement(parentModel, name, binding, isFn);
 	}
 };
 
 $cheeta.model.root = new $cheeta.model.Model(null);
-$cheeta.model.root.__value = window;
+$cheeta.model.root.value = window;
 
 $cheeta.onload = function() {
 	$cheeta.compiler.compile();
@@ -203,7 +208,15 @@ $cheeta.onload = function() {
 };
 
 $cheeta.init = function() {
-	
+}
+
+$cheeta.on = function(events, elem, fn) {
+	var split = events.split(' ');
+	for (var i = 0; i < split.length; i++) {
+		if (split[i].length > 0) {
+			elem.addEventListener(split[i], fn, false);
+		}
+	}
 }
 
 window.addEventListener('load', $cheeta.onload, false);
@@ -214,27 +227,109 @@ $cheeta.directives = {
 $cheeta.directive = function(name, fn, order) {
 	if (fn == null) {
 		var directive = $cheeta.directives[name];
-		if (directive == null) {
+		if (directive == null && name.indexOf('.', name.length - 1) > -1) {
 			var wildcards = $cheeta.directives['*']
+			name = name.substring(0, name.length - 1);
 			for (var i = 0; i < wildcards.length; i++) {
-				if (name.indexOf(wildcards[i].name) == 0) {
+				if (name.indexOf(wildcards[i].name) == 0 || name.indexOf('data-' + wildcards[i].name) == 0) {
 					directive = wildcards[i];
 					break;
 				}
 			}
+			return directive || $cheeta.directive(''); 
 		}
-		return directive || (name.indexOf('.', name.length - 1) > -1 ? $cheeta.directive('') : null); 
+		return directive;
 	}
 	var index = name.indexOf('*', name.length - 1);
 	if (index > -1) {
 		name = name.substring(0, name.length - 1);
-		$cheeta.directives['*'].push({name: 'data-' + name, fn: fn, order: order}, {name: name, fn: fn, order: order});
+		$cheeta.directives['*'].push({name: name, fn: fn, order: order});
 		return $cheeta.directives['*'][1]; 
 	} else {
 		return $cheeta.directives['data-' + name] = $cheeta.directives[name] = {name: name, fn: fn, order: order || 10000};
 	}
-}
+};
 
+$cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn) {
+	var resolveInterceptor = function(name, isFn) {
+		var binding = updateFn == null || isFn ? null : 
+			{
+				elem: elem, 
+				attr: attr,
+				baseAttrName: attr.name.substring(attr.name.indexOf('data-') == 0 ? 5 : 0, attr.name.length - 1),
+				update: function() {
+					updateFn.apply(this, [model]);
+				}
+			};
+		var model = $cheeta.model.bind(parentModels, name, binding, isFn);
+		if (binding != null) {
+			$cheeta.futureUpdates.push({binding: binding, model: model});
+		}
+		return model != null ? $cheeta.model.toExpr(model) : name;
+	}
+	var quote = null, regexpMod = false, result = '', index = -1, models = [];
+	var val = attr.value + '\x1a';
+	for (var i = 0; i < val.length; i++) {
+		var ch = val.charAt(i);
+		if (quote != null) {
+			if (ch == quote && val.charAt(i - 1) != '\\') {
+				if (quote == '/') {
+					regexpMod = true;
+				}
+				quote = null;
+			}
+			result += ch;
+		} else {
+			if (regexpMod) {
+				if (ch < 'a' && ch > 'z') {
+					regexpMod = false;
+				}
+				result += ch;
+			} else if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '!' || ch == '"' ||
+					(ch >= '%' && ch <= '/' && ch != '.') || (ch >= ':' && ch <= '?') || ch == '\x1a') {
+				if (ch == '\'' || ch == '"' || ch == '/') {
+					quote = ch;
+				}
+				if (index > -1) {
+					var name = val.substring(index, i);
+					var isLiteral = false;
+					if (name === 'true' || name === 'false' || name === 'undefined' || name === 'null' || 
+						name === 'NaN' || !isNaN(name)) {
+						result += name;
+					} else {
+						var ii = i;
+						while (val.charAt(ii) == ' ') {
+							ii++;
+						}
+						if (val.charAt(ii) == '(') {
+							result += resolveInterceptor(name, true);
+						} else {
+							result += resolveInterceptor(name);
+						}
+					}
+					index = -1;
+				}
+				result += ch;
+			} else {
+				if (index == -1) {
+					index = i;
+				}
+			}
+		}
+	}
+	return result.substring(0, result.length - 1);
+};
+
+$cheeta.directive.onModelUpdate = function(elem, attr, parentModels, fn) {
+	var expr = $cheeta.directive.resolveModelRefs(elem, attr, parentModels, function(model) {
+		var val = null;
+		try {
+			val = eval(elem.getAttribute(this.attr.name));
+		} catch (e) {}
+		fn.apply(this, [val]);
+	});
+	elem.setAttribute(attr.name, expr);
+};
 $cheeta.compiler = {
 	recursiveCompile: function(parentModels, node, skipSiblings) {
 		if (node) {
@@ -258,11 +353,28 @@ $cheeta.compiler = {
 	},
 	compileDirectives: function(parentModels, elem) {
 		var attribs = [];
+		var additionalAttribs = [];
 		for (var k = 0; k < elem.attributes.length; k++) {
 			var attr = elem.attributes[k];
 			if (attr.specified) {
-				attribs.push(attr);
+				var split = attr.name.split('.');
+				if (split[split.length - 1] == '') {
+					split.pop();
+				}
+				if (split.length > 1) {
+					for (var i = 0; i < split.length - 1; i++) {
+						additionalAttribs.push({name: split[i] + '.', value: attr.value});
+					}
+//					elem.removeAttribute(attr.name)
+				} else {
+					attribs.push(attr);
+				}
 			}
+		}
+		for (var k = 0; k < additionalAttribs.length; k++) {
+			var attr = additionalAttribs[k];
+			elem.setAttribute(attr.name, attr.value);
+			attribs.push(elem.attributes[attr.name]);
 		}
 		//ordering the directives 'bind'/'ctrl' > 'for' > 'template'
 		attribs = attribs.sort(function(a, b) {
@@ -271,8 +383,10 @@ $cheeta.compiler = {
 			}
 			return order($cheeta.directive(a.name)) - order($cheeta.directive(b.name));
 		});
+		console.log('compiling attibutes', attribs);
 		for (var k = 0; k < attribs.length; k++) {
 			var attr = attribs[k];
+			console.log('compiling attr', attr);
 			var directive = $cheeta.directive(attr.name);
 			if (directive != null) {
 				parentModels = (directive.fn(elem, attr, parentModels) || []).concat(parentModels);				
@@ -393,6 +507,17 @@ $cheeta.location = {
        }, false);
 	}
 };
+$cheeta.futureUpdates = []
+
+$cheeta.directive('bind.', function(elem, attr, parentModels) {
+	$cheeta.directive('value.').fn(elem, attr, parentModels);
+	$cheeta.on('keyup change', elem, function(e) {
+		setTimeout(function() {
+			eval(elem.getAttribute(attr.name) + '=\'' + elem.value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'') + '\'');
+//			eval(elem.getAttribute(attr.name) + '=\'34334\'');
+		}, 0);
+	});
+}, 800);
 (function() {
 	var fn = function(elem, attr, parentModels) {
 		var defs = attr.value.split(/ *; */g);
@@ -417,107 +542,16 @@ $cheeta.location = {
 	$cheeta.directive('model.', fn, 201);
 })();
 
-$cheeta.futureEvals = [];
 $cheeta.futureUpdates = []
 
 $cheeta.directive('', function(elem, attr, parentModels) {
-	var baseAttrName = attr.name.substring(attr.name.indexOf('data-') == 0 ? 5 : 0, attr.name.length - 1);
-	this.parseExpr = function(val, bindAndResolve) {
-		var quote = null, regexpMod = false, result = '', index = -1, models = [];
-		val = val + '\x1a';
-		for (var i = 0; i < val.length; i++) {
-			var ch = val.charAt(i);
-			if (quote != null) {
-				if (ch == quote && val.charAt(i - 1) != '\\') {
-					if (quote == '/') {
-						regexpMod = true;
-					}
-					quote = null;
-				}
-				result += ch;
-			} else {
-				if (regexpMod) {
-					if (ch < 'a' && ch > 'z') {
-						regexpMod = false;
-					}
-					result += ch;
-				} else if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '!' || ch == '"' ||
-						(ch >= '%' && ch <= '/' && ch != '.') || (ch >= ':' && ch <= '?') || ch == '\x1a') {
-					if (ch == '\'' || ch == '"' || ch == '/') {
-						quote = ch;
-					}
-					if (index > -1) {
-						var name = val.substring(index, i);
-						var isLiteral = false;
-						if (name === 'true' || name === 'false' || name === 'undefined' || name === 'null' || 
-							name === 'NaN' || !isNaN(name)) {
-							result += name;
-						} else {
-							result += bindAndResolve(name);
-						}
-						index = -1;
-					}
-					result += ch;
-				} else {
-					if (index == -1) {
-						index = i;
-					}
-				}
-			}
-		}
-		return result.substring(0, result.length - 1);
-	};
-	
-	var expr = this.parseExpr(attr.value, function(name) {
-		var binding = baseAttrName === 'init' ? null : 
-			{
-				elem: elem, 
-				attr: attr,
-				baseAttrName: baseAttrName,
-				update: function(model) {
-					var val = null;
-					try {
-						val = eval(this.elem.getAttribute(this.attr.name));
-					} catch (e) {}
-					if (val instanceof Object){
-						return;
-					}
-					if (this.baseAttrName === 'text') {
-						this.elem.innerHTML = '';
-						this.elem.appendChild(document.createTextNode(val || ''));
-					} else if (this.baseAttrName === 'html') {
-						this.elem.innerHTML = val || '';
-					} else {
-						if (this.baseAttrName === 'value') {
-							if (this.elem.value !== undefined) {
-								this.elem.value = val || null;
-							}
-						}
-						this.elem.setAttribute(this.baseAttrName, val);
-					}
-				}
-			};
-		var model = $cheeta.model.bind(parentModels, name, binding);
-		if (binding != null) {
-			$cheeta.futureUpdates.push({binding: binding, model: model});
-		}
-		return model != null ? $cheeta.model.toExpr(model) : name;
+	$cheeta.directive.onModelUpdate(elem, attr, parentModels, function(val) {
+		elem.setAttribute(this.baseAttrName, val);
 	});
-	
-	if (baseAttrName === 'init') {
-		$cheeta.futureEvals.push(expr);
-	}
-	
-	elem.setAttribute(attr.name, expr);
-}, 600);
+}, 700);		
 
-$cheeta.futureEvals = [];
 
-$cheeta.directive('eval.', function(elem, attr) {
-	$cheeta.futureEvals.push(attr.value);
-}, 700);
-
-$cheeta.directive('for.', function(elem, attr, parentModels, baseAttrName) {
+$cheeta.directive('for.', function(elem, attr, parentModels) {
 	elem.__isFor_ = true;
 	var split = attr.value.split(/ +in +/g), name, arrayVar, as;
 	name = split[1];
@@ -538,14 +572,14 @@ $cheeta.directive('for.', function(elem, attr, parentModels, baseAttrName) {
 			}
 			if (oldLen > newLen) { 
 				for (var i = oldLen - 1; i >= newLen; i--) {
-					for (var key in model[i].__bindings) {
-						var bindings = model[i].__bindings[key];
+					for (var key in model.children[i].bindings) {
+						var bindings = model.children[i].bindings[key];
 						for (var k = 0; k < bindings.length; k++) {
 							var rmElem = bindings[k].elem;
 							rmElem.parentNode.removeChild(rmElem);
 						}
 					}
-					delete model[i];
+					delete model.children[i];
 				}
 			} else if (oldLen < newLen) {
 				var arrayVar = this.arrayVar;
@@ -558,20 +592,79 @@ $cheeta.directive('for.', function(elem, attr, parentModels, baseAttrName) {
 							(this.elem.getAttribute('model.') ? (';' + this.elem.getAttribute('model.').value) : '')); 
 					clone.style.display = '';
 					this.elem.parentNode.insertBefore(clone, this.elem);
-					$cheeta.compiler.compileElem(this.__parentModels, clone, true);
+					$cheeta.compiler.compileElem(this.parentModels, clone, true);
 				}
 			}
 			//TODO splice with the same size
 		}
 	}
 	var model = $cheeta.model.bind(parentModels, name, binding);
-//	binding.__parentModels = [model.__parent].concat(parentModels);
-	binding.__parentModels = parentModels;
+//	binding.parentModels = [model.parent].concat(parentModels);
+	binding.parentModels = parentModels;
 
 	elem.style.display = 'none';
 	model.__isArray = true;
 	return [model];
 }, 100);
+
+$cheeta.futureUpdates = []
+
+$cheeta.directive('html.', function(elem, attr, parentModels) {
+	$cheeta.directive.onModelUpdate(elem, attr, parentModels, function(val) {
+		if (val != elem.innerHTML) {
+			elem.innerHTML = val || '';
+		}
+	});
+}, 600);
+$cheeta.futureEvals = [];
+
+$cheeta.directive('init.', function(elem, attr) {
+	$cheeta.futureEvals.push(expr);
+	var expr = $cheeta.compiler.resolveModelRefs(elem, attr);
+	$cheeta.futureEvals.push(expr);
+}, 700);
+
+$cheeta.keyconsts = {
+	'backspace':8,'tab':9,'enter':13,'shift':16,'ctrl':17,'alt':18,'space':32,'pause':19,'break':19,'capslock':20,'escape':27,'pageup':33,'pagedown':34,'end':35,
+	'home':36,'left':37,'up':38,'right':39,'down arrow':40,'insert':45,	'delete':46,'colon':58, 'f1':112,'f2':113,'f3':114,'f4':115,'f5':116,'f6':117,'f7':118,
+	'f8':119,'f9':120,'f10':121,'f11':122,'f12':123,'numlock':144,'scrolllock':145,'semicolon':186,'comma':188,'dash':189,'dot':190
+};
+$cheeta.directive('on*', function(elem, attr, parentModels) {
+	var expr = $cheeta.directive.resolveModelRefs(attr.value, attr, parentModels);
+	elem.setAttribute(attr.name, expr);
+	
+	var baseAttrName = attr.name.substring(attr.name.indexOf('data-') == 0 ? 7 : 2, attr.name.length - 1);
+	var split = baseAttrName.split('-');
+	(function bindEvent(event, key, attrName) {
+		var fn = function(e) {
+			eval(elem.getAttribute(attrName));
+		};
+		console.log(event);
+		if (event.indexOf('key') == 0) {
+			elem.addEventListener(event, function(e) {
+				var code = 1;
+				if (key.length == 1) {
+					code = key.charCodeAt(0);
+				} else {
+					code = $cheeta.keyconsts[key];
+					if (code == null) {
+						code = parseInt(key);
+						if (isNaN(code)) {
+							throw 'unknown key: ' + key;
+						}
+					}
+				}
+				if (e.which == code) {
+					fn.apply(elem, [e]);
+				}
+			}, false);			
+		} else {
+			elem.addEventListener(event, function(e) {
+				fn.apply(elem, [e]);
+			}, false);
+		}
+	})(split[0], split[1], attr.name);
+}, 800);
 
 $cheeta.templates = {};
 
@@ -581,4 +674,23 @@ $cheeta.directive('template.', function(elem, attr, parentModels) {
 	for (var i = 0; i < children.length; i++) {
 		$cheeta.compiler.compileElem(parentModels, children[i]);
 	}
-}, 500);
+}, 900);
+
+$cheeta.futureUpdates = []
+
+$cheeta.directive('', function(elem, attr, parentModels) {
+	$cheeta.directive.onModelUpdate(elem, attr, parentModels, function(val) {
+		elem.innerHTML = '';
+		elem.appendChild(document.createTextNode(val || ''));
+	});
+}, 600);
+$cheeta.futureUpdates = []
+
+$cheeta.directive('value.', function(elem, attr, parentModels) {
+	$cheeta.directive.onModelUpdate(elem, attr, parentModels, function(val) {
+		if (elem.value != val) {
+			elem.value = val || null;
+		}
+	});
+}, 600);
+

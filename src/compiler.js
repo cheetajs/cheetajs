@@ -1,31 +1,3 @@
-$cheeta.directives = {
-	'*': []
-};
-
-$cheeta.directive = function(name, fn, order) {
-	if (fn == null) {
-		var directive = $cheeta.directives[name];
-		if (directive == null) {
-			var wildcards = $cheeta.directives['*']
-			for (var i = 0; i < wildcards.length; i++) {
-				if (name.indexOf(wildcards[i].name) == 0) {
-					directive = wildcards[i];
-					break;
-				}
-			}
-		}
-		return directive || (name.indexOf('.', name.length - 1) > -1 ? $cheeta.directive('') : null); 
-	}
-	var index = name.indexOf('*', name.length - 1);
-	if (index > -1) {
-		name = name.substring(0, name.length - 1);
-		$cheeta.directives['*'].push({name: 'data-' + name, fn: fn, order: order}, {name: name, fn: fn, order: order});
-		return $cheeta.directives['*'][1]; 
-	} else {
-		return $cheeta.directives['data-' + name] = $cheeta.directives[name] = {name: name, fn: fn, order: order || 10000};
-	}
-}
-
 $cheeta.compiler = {
 	recursiveCompile: function(parentModels, node, skipSiblings) {
 		if (node) {
@@ -49,11 +21,28 @@ $cheeta.compiler = {
 	},
 	compileDirectives: function(parentModels, elem) {
 		var attribs = [];
+		var additionalAttribs = [];
 		for (var k = 0; k < elem.attributes.length; k++) {
 			var attr = elem.attributes[k];
 			if (attr.specified) {
-				attribs.push(attr);
+				var split = attr.name.split('.');
+				if (split[split.length - 1] == '') {
+					split.pop();
+				}
+				if (split.length > 1) {
+					for (var i = 0; i < split.length - 1; i++) {
+						additionalAttribs.push({name: split[i] + '.', value: attr.value});
+					}
+//					elem.removeAttribute(attr.name)
+				} else {
+					attribs.push(attr);
+				}
 			}
+		}
+		for (var k = 0; k < additionalAttribs.length; k++) {
+			var attr = additionalAttribs[k];
+			elem.setAttribute(attr.name, attr.value);
+			attribs.push(elem.attributes[attr.name]);
 		}
 		//ordering the directives 'bind'/'ctrl' > 'for' > 'template'
 		attribs = attribs.sort(function(a, b) {
@@ -62,8 +51,10 @@ $cheeta.compiler = {
 			}
 			return order($cheeta.directive(a.name)) - order($cheeta.directive(b.name));
 		});
+		console.log('compiling attibutes', attribs);
 		for (var k = 0; k < attribs.length; k++) {
 			var attr = attribs[k];
+			console.log('compiling attr', attr);
 			var directive = $cheeta.directive(attr.name);
 			if (directive != null) {
 				parentModels = (directive.fn(elem, attr, parentModels) || []).concat(parentModels);				

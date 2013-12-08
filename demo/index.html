@@ -9,16 +9,23 @@ div {
 </style>
 </head>
 <body data-ctrl.='app1'>
+	<input type='text' data-bind.=".alert"><span data-html.=".alert"></span>
 	<div data-ctrl.='.about'>
 		<div data-html.='.firstName'></div>
-		<input type='text' data-value.='.lastName'>
+		<input type='text' data-bind.='.lastName'>
 		<div data-html.='.lastName'></div>
 		Cars: 
 		<ul>
 			<li data-for.="car in .cars" >
 				<div data-text.="car"></div>
+				<input type='text' data-bind.="car">
+				<button data-onclick.onkeyup-enter.onkeyup-space.="cars.splice($i, 1)">rm</button>
+				<button data-onclick.onkeyup-enter.onkeyup-space.="delete car">-</button>
 			</li>
 		</ul>
+		<input type='text' data-bind.=".newCar">
+		<button data-onclick.onkeyup-enter.onkeyup-space.=".cars.push(.newCar)">+</button>
+		<button data-onclick.onkeyup-enter.onkeyup-space.=".cars.pop()">-</button>
 		<div>
 			Organization: <div data-text.=".work.org"></div>
 			Position: 

@@ -6,4 +6,4 @@ $cheeta.directive('template.', function(elem, attr, parentModels) {
 	for (var i = 0; i < children.length; i++) {
 		$cheeta.compiler.compileElem(parentModels, children[i]);
 	}
-}, 500);
+}, 900);
