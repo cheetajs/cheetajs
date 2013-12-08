@@ -51,10 +51,10 @@ $cheeta.compiler = {
 			}
 			return order($cheeta.directive(a.name)) - order($cheeta.directive(b.name));
 		});
-		console.log('compiling attibutes', attribs);
+//		console.log('compiling attibutes', attribs);
 		for (var k = 0; k < attribs.length; k++) {
 			var attr = attribs[k];
-			console.log('compiling attr', attr);
+//			console.log('compiling attr', attr);
 			var directive = $cheeta.directive(attr.name);
 			if (directive != null) {
 				parentModels = (directive.fn(elem, attr, parentModels) || []).concat(parentModels);				

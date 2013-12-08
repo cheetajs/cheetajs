@@ -8,6 +8,17 @@ $cheeta.model = {
 		this.parent = parent;
 		this.name = name;
 		this.children = {};
+		this.toExpr = function() {
+			var expr = '';
+			var model = this;
+			while (model.parent != null && model.name != null) {
+				var ch = model.name.charAt(0);
+				expr = (ch >= '0' &&  ch <= '9' ? '[' + model.name + ']' : '.' + model.name) + expr;
+				model = model.parent;
+			}
+			
+			return expr.substring(1);
+		};
 	},
 	ArrayInterceptor: function(model) {
 		var model = model;
@@ -60,12 +71,14 @@ $cheeta.model = {
 		}
 	},
 	interceptArray: function(model) {
-		var interceptor = new this.ArrayInterceptor(model);
-		for (var key in interceptor) {
-			if (model.value[key] == interceptor[key]) {
-				break;
+		if (model.value != null) {
+			var interceptor = new this.ArrayInterceptor(model);
+			for (var key in interceptor) {
+				if (model.value[key] == interceptor[key]) {
+					break;
+				}
+				model.value[key] = interceptor[key];
 			}
-			model.value[key] = interceptor[key];
 		}
 	},
 	update: function(model, val, oldVal) {
@@ -79,16 +92,13 @@ $cheeta.model = {
 			}
 		}
 	},
-	bindElement: function(parent, name, binding, isFn) {
+	bindElement: function(parent, name, binding) {
 //		console.log('bind element: ', parent, name, binding);
 		var model = parent.children[name];
 		if (model === undefined) {
 			model = new $cheeta.model.Model();
 			model.name = name;
 			model.parent = parent;
-			if (isFn) {
-				return model;
-			}
 			if (parent === this.root) {
 				if (window[name] !== undefined) {
 					parent.children[name] = undefined;
@@ -108,7 +118,7 @@ $cheeta.model = {
 		return model;
 	},
 	interceptProp: function(model, value, name) {
-		console.log('intercepting: ', value, name);
+//		console.log('intercepting: ', value, name);
 		if (value != null) {
 			//model.value = value[name];
 			Object.defineProperty(value, name, {
@@ -116,7 +126,7 @@ $cheeta.model = {
 		        	var prevVal = model.value;
 		        	if (prevVal != val) {
 		        		model.value = val;
-		        		if (model.__isArray) {
+		        		if (model.isArray) {
 		        			$cheeta.model.interceptArray(model);
 		        		}
 		        	}
@@ -137,18 +147,14 @@ $cheeta.model = {
 			});
 		}
 	},
-	toExpr: function(model) {
-		var expr = '';
-		while (model.parent != null && model.name != null) {
-			var ch = model.name.charAt(0);
-			expr = (ch >= '0' &&  ch <= '9' ? '[' + model.name + ']' : '.' + model.name) + expr;
-			model = model.parent;
+	bind: function(parentModels, name, binding) {
+		if (name == '$i') {
+			for (var i = parentModels.length - 1; i >= 0; i--) {
+				if (parentModels[i].name == '$i') {
+					return parentModels[i];
+				}
+			}
 		}
-		
-		return expr.substring(1);
-	},
-	bind: function(parentModels, name, binding, isFn) {
-		console.log('binding: ', name, binding);
 		if (name.charAt(0) === '.') {
 			// bind dot-starting to the first parent
 			for (key in parentModels[0].bindings) {
@@ -167,7 +173,7 @@ $cheeta.model = {
 			parentModel = parentModels[j];
 			parentModel = (function findParentModel(model, rootName) {
 				while (model != $cheeta.model.root) {
-					if (rootName == model.name || model.bindings[rootName] != null) {
+					if (rootName == model.name || (model.bindings && model.bindings[rootName] != null)) {
 						return model;
 					}
 					model = model.parent;
@@ -195,7 +201,7 @@ $cheeta.model = {
 				parentModel = parentModel.children[split[i]];
 			}
 		}
-		return this.bindElement(parentModel, name, binding, isFn);
+		return this.bindElement(parentModel, name, binding);
 	}
 };
 
@@ -251,8 +257,8 @@ $cheeta.directive = function(name, fn, order) {
 };
 
 $cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn) {
-	var resolveInterceptor = function(name, isFn) {
-		var binding = updateFn == null || isFn ? null : 
+	var resolveInterceptor = function(name) {
+		var binding = updateFn == null ? null : 
 			{
 				elem: elem, 
 				attr: attr,
@@ -261,11 +267,11 @@ $cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn
 					updateFn.apply(this, [model]);
 				}
 			};
-		var model = $cheeta.model.bind(parentModels, name, binding, isFn);
+		var model = $cheeta.model.bind(parentModels, name, binding);
 		if (binding != null) {
 			$cheeta.futureUpdates.push({binding: binding, model: model});
 		}
-		return model != null ? $cheeta.model.toExpr(model) : name;
+		return model != null ? model.toExpr() : name;
 	}
 	var quote = null, regexpMod = false, result = '', index = -1, models = [];
 	var val = attr.value + '\x1a';
@@ -302,7 +308,13 @@ $cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn
 							ii++;
 						}
 						if (val.charAt(ii) == '(') {
-							result += resolveInterceptor(name, true);
+							var fnIndex = name.lastIndexOf('.');
+							if (fnIndex > -1) {
+								result += resolveInterceptor(name.substring(0, fnIndex)) + '.';
+								result += name.substring(fnIndex + 1);
+							} else {
+								result += name;
+							}
 						} else {
 							result += resolveInterceptor(name);
 						}
@@ -383,10 +395,10 @@ $cheeta.compiler = {
 			}
 			return order($cheeta.directive(a.name)) - order($cheeta.directive(b.name));
 		});
-		console.log('compiling attibutes', attribs);
+//		console.log('compiling attibutes', attribs);
 		for (var k = 0; k < attribs.length; k++) {
 			var attr = attribs[k];
-			console.log('compiling attr', attr);
+//			console.log('compiling attr', attr);
 			var directive = $cheeta.directive(attr.name);
 			if (directive != null) {
 				parentModels = (directive.fn(elem, attr, parentModels) || []).concat(parentModels);				
@@ -511,7 +523,7 @@ $cheeta.futureUpdates = []
 
 $cheeta.directive('bind.', function(elem, attr, parentModels) {
 	$cheeta.directive('value.').fn(elem, attr, parentModels);
-	$cheeta.on('keyup change', elem, function(e) {
+	$cheeta.on('keydown keyup change', elem, function(e) {
 		setTimeout(function() {
 			eval(elem.getAttribute(attr.name) + '=\'' + elem.value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'') + '\'');
 //			eval(elem.getAttribute(attr.name) + '=\'34334\'');
@@ -592,7 +604,11 @@ $cheeta.directive('for.', function(elem, attr, parentModels) {
 							(this.elem.getAttribute('model.') ? (';' + this.elem.getAttribute('model.').value) : '')); 
 					clone.style.display = '';
 					this.elem.parentNode.insertBefore(clone, this.elem);
-					$cheeta.compiler.compileElem(this.parentModels, clone, true);
+					var arrayIndexModel = new $cheeta.model.Model($cheeta.model.root, '$i');
+					arrayIndexModel.toExpr = function() {
+						return i;
+					}; 
+					$cheeta.compiler.compileElem(this.parentModels.concat(arrayIndexModel), clone, true);
 				}
 			}
 			//TODO splice with the same size
@@ -603,7 +619,7 @@ $cheeta.directive('for.', function(elem, attr, parentModels) {
 	binding.parentModels = parentModels;
 
 	elem.style.display = 'none';
-	model.__isArray = true;
+	model.isArray = true;
 	return [model];
 }, 100);
 
@@ -618,9 +634,9 @@ $cheeta.directive('html.', function(elem, attr, parentModels) {
 }, 600);
 $cheeta.futureEvals = [];
 
-$cheeta.directive('init.', function(elem, attr) {
+$cheeta.directive('init.', function(elem, attr, parentModels) {
 	$cheeta.futureEvals.push(expr);
-	var expr = $cheeta.compiler.resolveModelRefs(elem, attr);
+	var expr = $cheeta.directive.resolveModelRefs(elem, attr, parentModels);
 	$cheeta.futureEvals.push(expr);
 }, 700);
 
@@ -637,6 +653,7 @@ $cheeta.directive('on*', function(elem, attr, parentModels) {
 	var split = baseAttrName.split('-');
 	(function bindEvent(event, key, attrName) {
 		var fn = function(e) {
+			console.log(e);
 			eval(elem.getAttribute(attrName));
 		};
 		console.log(event);
@@ -678,10 +695,14 @@ $cheeta.directive('template.', function(elem, attr, parentModels) {
 
 $cheeta.futureUpdates = []
 
-$cheeta.directive('', function(elem, attr, parentModels) {
+$cheeta.directive('text.', function(elem, attr, parentModels) {
 	$cheeta.directive.onModelUpdate(elem, attr, parentModels, function(val) {
 		elem.innerHTML = '';
+		console.log(elem);
+		console.log('val: ' + ' ' + val);
+		console.log('innerhtml: ' +  elem.innerHTML);
 		elem.appendChild(document.createTextNode(val || ''));
+		console.log('innerhtml after: ' +  elem.innerHTML);
 	});
 }, 600);
 $cheeta.futureUpdates = []

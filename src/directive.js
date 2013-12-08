@@ -29,8 +29,8 @@ $cheeta.directive = function(name, fn, order) {
 };
 
 $cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn) {
-	var resolveInterceptor = function(name, isFn) {
-		var binding = updateFn == null || isFn ? null : 
+	var resolveInterceptor = function(name) {
+		var binding = updateFn == null ? null : 
 			{
 				elem: elem, 
 				attr: attr,
@@ -39,11 +39,11 @@ $cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn
 					updateFn.apply(this, [model]);
 				}
 			};
-		var model = $cheeta.model.bind(parentModels, name, binding, isFn);
+		var model = $cheeta.model.bind(parentModels, name, binding);
 		if (binding != null) {
 			$cheeta.futureUpdates.push({binding: binding, model: model});
 		}
-		return model != null ? $cheeta.model.toExpr(model) : name;
+		return model != null ? model.toExpr() : name;
 	}
 	var quote = null, regexpMod = false, result = '', index = -1, models = [];
 	var val = attr.value + '\x1a';
@@ -80,7 +80,13 @@ $cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn
 							ii++;
 						}
 						if (val.charAt(ii) == '(') {
-							result += resolveInterceptor(name, true);
+							var fnIndex = name.lastIndexOf('.');
+							if (fnIndex > -1) {
+								result += resolveInterceptor(name.substring(0, fnIndex)) + '.';
+								result += name.substring(fnIndex + 1);
+							} else {
+								result += name;
+							}
 						} else {
 							result += resolveInterceptor(name);
 						}

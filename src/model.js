@@ -8,6 +8,17 @@ $cheeta.model = {
 		this.parent = parent;
 		this.name = name;
 		this.children = {};
+		this.toExpr = function() {
+			var expr = '';
+			var model = this;
+			while (model.parent != null && model.name != null) {
+				var ch = model.name.charAt(0);
+				expr = (ch >= '0' &&  ch <= '9' ? '[' + model.name + ']' : '.' + model.name) + expr;
+				model = model.parent;
+			}
+			
+			return expr.substring(1);
+		};
 	},
 	ArrayInterceptor: function(model) {
 		var model = model;
@@ -60,12 +71,14 @@ $cheeta.model = {
 		}
 	},
 	interceptArray: function(model) {
-		var interceptor = new this.ArrayInterceptor(model);
-		for (var key in interceptor) {
-			if (model.value[key] == interceptor[key]) {
-				break;
+		if (model.value != null) {
+			var interceptor = new this.ArrayInterceptor(model);
+			for (var key in interceptor) {
+				if (model.value[key] == interceptor[key]) {
+					break;
+				}
+				model.value[key] = interceptor[key];
 			}
-			model.value[key] = interceptor[key];
 		}
 	},
 	update: function(model, val, oldVal) {
@@ -79,16 +92,13 @@ $cheeta.model = {
 			}
 		}
 	},
-	bindElement: function(parent, name, binding, isFn) {
+	bindElement: function(parent, name, binding) {
 //		console.log('bind element: ', parent, name, binding);
 		var model = parent.children[name];
 		if (model === undefined) {
 			model = new $cheeta.model.Model();
 			model.name = name;
 			model.parent = parent;
-			if (isFn) {
-				return model;
-			}
 			if (parent === this.root) {
 				if (window[name] !== undefined) {
 					parent.children[name] = undefined;
@@ -108,7 +118,7 @@ $cheeta.model = {
 		return model;
 	},
 	interceptProp: function(model, value, name) {
-		console.log('intercepting: ', value, name);
+//		console.log('intercepting: ', value, name);
 		if (value != null) {
 			//model.value = value[name];
 			Object.defineProperty(value, name, {
@@ -116,7 +126,7 @@ $cheeta.model = {
 		        	var prevVal = model.value;
 		        	if (prevVal != val) {
 		        		model.value = val;
-		        		if (model.__isArray) {
+		        		if (model.isArray) {
 		        			$cheeta.model.interceptArray(model);
 		        		}
 		        	}
@@ -137,18 +147,14 @@ $cheeta.model = {
 			});
 		}
 	},
-	toExpr: function(model) {
-		var expr = '';
-		while (model.parent != null && model.name != null) {
-			var ch = model.name.charAt(0);
-			expr = (ch >= '0' &&  ch <= '9' ? '[' + model.name + ']' : '.' + model.name) + expr;
-			model = model.parent;
+	bind: function(parentModels, name, binding) {
+		if (name == '$i') {
+			for (var i = parentModels.length - 1; i >= 0; i--) {
+				if (parentModels[i].name == '$i') {
+					return parentModels[i];
+				}
+			}
 		}
-		
-		return expr.substring(1);
-	},
-	bind: function(parentModels, name, binding, isFn) {
-		console.log('binding: ', name, binding);
 		if (name.charAt(0) === '.') {
 			// bind dot-starting to the first parent
 			for (key in parentModels[0].bindings) {
@@ -167,7 +173,7 @@ $cheeta.model = {
 			parentModel = parentModels[j];
 			parentModel = (function findParentModel(model, rootName) {
 				while (model != $cheeta.model.root) {
-					if (rootName == model.name || model.bindings[rootName] != null) {
+					if (rootName == model.name || (model.bindings && model.bindings[rootName] != null)) {
 						return model;
 					}
 					model = model.parent;
@@ -195,7 +201,7 @@ $cheeta.model = {
 				parentModel = parentModel.children[split[i]];
 			}
 		}
-		return this.bindElement(parentModel, name, binding, isFn);
+		return this.bindElement(parentModel, name, binding);
 	}
 };
 

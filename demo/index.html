@@ -10,6 +10,7 @@ div {
 </head>
 <body data-ctrl.='app1'>
 	<input type='text' data-bind.=".alert"><span data-html.=".alert"></span>
+	<input type='text'>
 	<div data-ctrl.='.about'>
 		<div data-html.='.firstName'></div>
 		<input type='text' data-bind.='.lastName'>
@@ -17,15 +18,16 @@ div {
 		Cars: 
 		<ul>
 			<li data-for.="car in .cars" >
-				<div data-text.="car"></div>
+				<span data-text.="car"></span>
 				<input type='text' data-bind.="car">
-				<button data-onclick.onkeyup-enter.onkeyup-space.="cars.splice($i, 1)">rm</button>
-				<button data-onclick.onkeyup-enter.onkeyup-space.="delete car">-</button>
+				<button data-onclick.onkeyup-space.="cars.splice($i, 1)">delete</button>
 			</li>
 		</ul>
 		<input type='text' data-bind.=".newCar">
-		<button data-onclick.onkeyup-enter.onkeyup-space.=".cars.push(.newCar)">+</button>
-		<button data-onclick.onkeyup-enter.onkeyup-space.=".cars.pop()">-</button>
+		<button tabindex="0" data-onclick.onkeyup-space.=".cars.push(.newCar)">+</button>
+		<button data-onclick.onkeyup-space.=".cars.pop()">remove last</button>
+		<button data-onclick.onkeyup-space.=".cars.shift()">remove first</button>
+		<button data-onclick.onkeyup-space.=".cars.unshift(.newCar)">add to the beginning</button>
 		<div>
 			Organization: <div data-text.=".work.org"></div>
 			Position: 
@@ -34,6 +36,10 @@ div {
 			</div>
 		</div>
 	</div>
+	<input type="text" data-bind.="command" data-onkeyup-enter.="result.push(eval(command))" data-init.="result = []">
+	<ul>
+		<li data-for.="r in result" data-text.="r.toString()"></li>
+	</ul>
 
 	<script type="text/cj-template" id="template1">
 		<div>TEMPLATE r.value <div data-text.="r.value">INNER TEMPLATE</div> c.value <div data-html.="c.value"></div>

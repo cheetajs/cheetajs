@@ -39,7 +39,11 @@ $cheeta.directive('for.', function(elem, attr, parentModels) {
 							(this.elem.getAttribute('model.') ? (';' + this.elem.getAttribute('model.').value) : '')); 
 					clone.style.display = '';
 					this.elem.parentNode.insertBefore(clone, this.elem);
-					$cheeta.compiler.compileElem(this.parentModels, clone, true);
+					var arrayIndexModel = new $cheeta.model.Model($cheeta.model.root, '$i');
+					arrayIndexModel.toExpr = function() {
+						return i;
+					}; 
+					$cheeta.compiler.compileElem(this.parentModels.concat(arrayIndexModel), clone, true);
 				}
 			}
 			//TODO splice with the same size
@@ -50,6 +54,6 @@ $cheeta.directive('for.', function(elem, attr, parentModels) {
 	binding.parentModels = parentModels;
 
 	elem.style.display = 'none';
-	model.__isArray = true;
+	model.isArray = true;
 	return [model];
 }, 100);
