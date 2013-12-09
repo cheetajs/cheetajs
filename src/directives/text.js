@@ -1,5 +1,3 @@
-$cheeta.futureUpdates = []
-
 $cheeta.directive('text.', function(elem, attr, parentModels) {
 	$cheeta.directive.onModelUpdate(elem, attr, parentModels, function(val) {
 		elem.innerHTML = '';

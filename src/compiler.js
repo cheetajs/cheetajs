@@ -16,10 +16,28 @@ $cheeta.compiler = {
 		}
 	},
 	compileElem: function(parentModels, elem, skipSiblings) {
-		this.recursiveCompile(parentModels, elem, skipSiblings)
+		$cheeta.future.evals = [];
+		this.recursiveCompile(parentModels, elem, skipSiblings);
 		this.runFutures();
 	},
+	cleanUpFromModel: function(elem) {
+		if (elem.__$cheeta_models_ != null) {
+			for (var k = 0; k < elem.__$cheeta_models_.length; k++) {
+				var model = elem.__$cheeta_models_[k];
+				for (var name in model.bindings) {
+					var bindings = model.bindings[name];
+					for (var i = 0; i < bindings.length; i++) {
+						var binding = bindings[i];
+						if (binding.elem == elem) {
+							bindings.splice(i, 1);
+						}
+					}
+				}
+			}
+		}
+	},
 	compileDirectives: function(parentModels, elem) {
+		this.cleanUpFromModel(elem);
 		var attribs = [];
 		var additionalAttribs = [];
 		for (var k = 0; k < elem.attributes.length; k++) {
@@ -44,7 +62,6 @@ $cheeta.compiler = {
 			elem.setAttribute(attr.name, attr.value);
 			attribs.push(elem.attributes[attr.name]);
 		}
-		//ordering the directives 'bind'/'ctrl' > 'for' > 'template'
 		attribs = attribs.sort(function(a, b) {
 			function order(d) {
 				return d == null ? $cheeta.directive('').order : d.order;  
@@ -57,7 +74,12 @@ $cheeta.compiler = {
 //			console.log('compiling attr', attr);
 			var directive = $cheeta.directive(attr.name);
 			if (directive != null) {
-				parentModels = (directive.fn(elem, attr, parentModels) || []).concat(parentModels);				
+				var models = directive.fn(elem, attr, parentModels);
+				if (models != null) {
+					if (elem.__$cheeta_models_ == null) elem.__$cheeta_models_ = [];
+					elem.__$cheeta_models_ = elem.__$cheeta_models_.concat(models);
+				}
+				parentModels = (models || []).concat(parentModels);				
 			}
 			if (elem.__isFor_) {
 				break;
@@ -66,7 +88,13 @@ $cheeta.compiler = {
 		return parentModels;
 	},
 	compile: function() {
-		$cheeta.futureEvals = [];
+		$cheeta.model.init();
+		
+		$cheeta.future = $cheeta.future || {};
+		$cheeta.future.evals = [];
+		
+		$cheeta.location.initRoute();
+		
 		scripts = document.getElementsByTagName('script');
 		for (var i = 0; i < scripts.length; i++) {
 			var script = scripts[i];
@@ -79,14 +107,12 @@ $cheeta.compiler = {
 		this.runFutures();
 	},
 	runFutures: function() {
-		for (var i = 0; i < $cheeta.futureEvals.length; i++) {
-			eval($cheeta.futureEvals[i]);
+		for (var i = 0; i < $cheeta.future.evals.length; i++) {
+			eval($cheeta.future.evals[i]);
 		}
-		for (var i = 0; i < $cheeta.futureUpdates.length; i++) {
-			var binding = $cheeta.futureUpdates[i];
-			binding.binding.update(binding.model);
-		}
-		$cheeta.futureEvals = [];
-		$cheeta.futureUpdates = [];
+//		for (var i = 0; i < $cheeta.futureUpdates.length; i++) {
+//			var binding = $cheeta.futureUpdates[i];
+//			binding.binding.update(binding.model);
+//		}
 	}
 };

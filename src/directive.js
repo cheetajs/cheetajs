@@ -40,9 +40,9 @@ $cheeta.directive.resolveModelRefs = function(elem, attr, parentModels, updateFn
 				}
 			};
 		var model = $cheeta.model.bind(parentModels, name, binding);
-		if (binding != null) {
-			$cheeta.futureUpdates.push({binding: binding, model: model});
-		}
+//		if (binding != null) {
+//			$cheeta.futureUpdates.push({binding: binding, model: model});
+//		}
 		return model != null ? model.toExpr() : name;
 	}
 	var quote = null, regexpMod = false, result = '', index = -1, models = [];

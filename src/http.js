@@ -1,32 +1,32 @@
 $cheeta.XHR = function() {
 	var origSend = this.send;
 	var origOpen = this.open;
-	var xhr = this;
-	this.open = function() {
-		origOpen.apply(_this, arguments);
+	var xhr = new XMLHttpRequest();
+	xhr.open = function() {
+		origOpen.apply(xhr, arguments);
 		return xhr;
 	};
-	this.send = function() {
-		origSend.apply(_this, arguments);
+	xhr.send = function() {
+		origSend.apply(xhr, arguments);
 		return xhr;
 	};
 	var successCallbacks = [], completeCallbacks = [], errorCallbacks = [], stateChangeCallbacks = [];
-	this.onError = function(callback) {
+	xhr.onError = function(callback) {
 		errorCallbacks.push(callback);
 		return xhr;
 	};
-	this.onSuccess = function(callback) {
+	xhr.onSuccess = function(callback) {
 		successCallbacks.push(callback);
 		return xhr;
 	};
-	this.onComplete = function(callback) {
+	xhr.onComplete = function(callback) {
 		completeCallbacks.push(callback);
 		return xhr;
 	};
-	this.onStateChange = function(callback) {
+	xhr.onStateChange = function(callback) {
 		stateChangeCallbacks.push(callback);
 	};
-	this.onreadystatechange = function() {
+	xhr.onreadystatechange = function() {
 		if (xhr.readyState == 4) {
 			if (200 <= xhr.status && xhr.status < 300) {
 				for (var i = 0; i < successCallbacks.length; i++) {
@@ -45,12 +45,13 @@ $cheeta.XHR = function() {
 			stateChangeCallbacks[i].apply(xhr, [xhr]);
 		}		
 	};
-	Object.defineProperty(this, 'data', {
+	Object.defineProperty(xhr, 'data', {
 		get: function() {
-			xhr.getResponseHeader('Content-Type') == 'application/json' ? JSON.stringify(xhr.responseText) : xhr.responseText;
-		}
-	}, configurable: true);
+			return xhr.getResponseHeader('Content-Type') == 'application/json' ? JSON.stringify(xhr.responseText) : xhr.responseText;
+		}, 
+		enumerable: true,
+		configurable: true
+	});
+	return xhr;
 };
-
 $cheeta.XHR.prototype = new XMLHttpRequest();
-$cheeta.XHR.prototype.constructor = $cheeta.XHR;

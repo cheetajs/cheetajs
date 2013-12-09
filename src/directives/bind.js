@@ -1,5 +1,3 @@
-$cheeta.futureUpdates = []
-
 $cheeta.directive('bind.', function(elem, attr, parentModels) {
 	$cheeta.directive('value.').fn(elem, attr, parentModels);
 	$cheeta.on('keydown keyup change', elem, function(e) {

@@ -11,10 +11,8 @@ $cheeta.directive('on*', function(elem, attr, parentModels) {
 	var split = baseAttrName.split('-');
 	(function bindEvent(event, key, attrName) {
 		var fn = function(e) {
-			console.log(e);
 			eval(elem.getAttribute(attrName));
 		};
-		console.log(event);
 		if (event.indexOf('key') == 0) {
 			elem.addEventListener(event, function(e) {
 				var code = 1;
