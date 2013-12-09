@@ -517,6 +517,25 @@ $cheeta.location = {
 				} 
 			}
        }, false);
+	},
+	route: function(routes) {
+		var binding = $cheeta.route.binding || {elem: document.body, parentModels: []};
+		this.watch(function(hash) {
+			var len = 0;
+			var url = null;
+			for (var key in routes) {
+				if (hash.indexOf(routes[key]) == 0 && len < routes[key].length) {
+					len = routes[key].length;
+					url = routes[key];
+				}
+			}
+			if (url != null) {
+				new $cheeta.XHR().open('get', url).onSuccess(function(xhr) {
+					binding.elem.innerHTML = xhr.data;
+					$cheeta.compiler.compileElem(binding.parentModels, binding.elem);
+				}).send();
+			}
+		});
 	}
 };
 $cheeta.futureUpdates = []
@@ -682,6 +701,15 @@ $cheeta.directive('on*', function(elem, attr, parentModels) {
 		}
 	})(split[0], split[1], attr.name);
 }, 800);
+
+$cheeta.futureEvals = [];
+
+$cheeta.directive('route.', function(elem, attr, parentModels) {
+	$cheeta.route.binding = {
+		elem: elem,
+		parentModels: parentModels
+	}
+}, 900);
 
 $cheeta.templates = {};
 

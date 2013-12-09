@@ -81,5 +81,24 @@ $cheeta.location = {
 				} 
 			}
        }, false);
+	},
+	route: function(routes) {
+		var binding = $cheeta.route.binding || {elem: document.body, parentModels: []};
+		this.watch(function(hash) {
+			var len = 0;
+			var url = null;
+			for (var key in routes) {
+				if (hash.indexOf(routes[key]) == 0 && len < routes[key].length) {
+					len = routes[key].length;
+					url = routes[key];
+				}
+			}
+			if (url != null) {
+				new $cheeta.XHR().open('get', url).onSuccess(function(xhr) {
+					binding.elem.innerHTML = xhr.data;
+					$cheeta.compiler.compileElem(binding.parentModels, binding.elem);
+				}).send();
+			}
+		});
 	}
 };
