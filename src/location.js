@@ -80,9 +80,7 @@ $cheeta.location = {
 					loc.notify(key, null, prev);
 				} 
 			}
-       }, false);
-	},
-	initRoute: function() {
+		}, false);
 		$cheeta.directive('route.').fn(document.body, {name: 'route.', value: '$cheeta.location.routes'}, []);
 	},
 	routes: {}

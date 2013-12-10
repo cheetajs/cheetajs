@@ -1,7 +1,9 @@
-var $cheeta = {};
-window['$cheeta'] = $cheeta;
+if (!$cheeta) {
+	var $cheeta = $cheeta || {};
+	window['$cheeta'] = $cheeta;
+}
 
-$cheeta.model = {
+$cheeta.model = $cheeta.model || {
 	Model: function(parent, name) {
 		this.value = undefined;
 		this.bindings = {};
@@ -27,10 +29,10 @@ $cheeta.model = {
 				var result = Array.prototype.push.apply(this, arguments);
 				var newLen = this.length;
 				$cheeta.model.update(model, newLen, len);
-				for (var i = len; i < newLen; i++) {
-					model.children[i].value = this[i];
-					$cheeta.model.interceptProp(model.children[i], this, i);
-				}
+//				for (var i = len; i < newLen; i++) {
+//					model.children[i].value = this[i];
+//					$cheeta.model.interceptProp(model.children[i], this, i);
+//				}
 				return result;
 			},
 			pop: function() {
@@ -61,10 +63,10 @@ $cheeta.model = {
 				var result = Array.prototype.splice.apply(this, arguments);
 				var newLen = this.length;
 				$cheeta.model.update(model, newLen, len);
-				for (var i = len; i < newLen; i++) {
-					model.children[i].value = this[i];
-					$cheeta.model.interceptProp(model.children[i], this, i);
-				}
+//				for (var i = len; i < newLen; i++) {
+//					model.children[i].value = this[i];
+//					$cheeta.model.interceptProp(model.children[i], this, i);
+//				}
 				return result;
 			}
 		};
@@ -92,19 +94,13 @@ $cheeta.model = {
 		}
 	},
 	bindElement: function(parent, name, binding) {
-//		console.log('bind element: ', parent, name, binding);
+		console.log('bind element: ', parent, name, binding);
 		var model = parent.children[name];
 		if (model === undefined) {
 			model = new $cheeta.model.Model();
 			model.name = name;
 			model.parent = parent;
-//			if (parent === this.root) {
-//				if (window[name] !== undefined) {
-//					parent.children[name] = undefined;
-//					return null;
-//				}
-				this.interceptProp(model, parent.value, name);
-//			}
+			this.interceptProp(model, parent.value, name);
 			parent.children[name] = model;
 		}
 		if (binding != null) {
@@ -114,14 +110,14 @@ $cheeta.model = {
 			}
 			model.bindings[bindName].push(binding);
 		}
-		model.value = parent.value == undefined ? undefined : (parent.value == null ? null : parent.value[name]);
+		model.value = parent.value == undefined ? undefined : 
+			(parent.value == null ? null : parent.value[name]);
 		return model;
 	},
 	interceptProp: function(model, value, name) {
-//		console.log('intercepting: ', value, name);
+		console.log('intercepting: ', value, name);
 		if (value != null) {
-			//model.value = value[name];
-			var prevVal = value[name];
+			var beforeValue = value[name];
 			try {
 				Object.defineProperty(value, name, {
 			        set: function(val) {
@@ -151,7 +147,13 @@ $cheeta.model = {
 				if (!(e instanceof TypeError)) throw e;
 				return;
 			}
-			value[name] = prevVal;
+			value[name] = beforeValue;
+			$cheeta.future.evals.push(function() {
+//				$cheeta.model.update(model, val, prevVal);
+				if (value != null) {
+					value[name] = beforeValue;
+				} 
+			});
 		}
 	},
 	findParentModel: function(model, rootName) {
@@ -216,11 +218,6 @@ $cheeta.model = {
 	}
 };
 
-$cheeta.onload = function() {
-	$cheeta.compiler.compile();
-	$cheeta.location.init();
-};
-
 $cheeta.on = function(events, elem, fn) {
 	var split = events.split(' ');
 	for (var i = 0; i < split.length; i++) {
@@ -230,7 +227,15 @@ $cheeta.on = function(events, elem, fn) {
 	}
 };
 
-window.addEventListener('load', $cheeta.onload, false);
+window.addEventListener('load', function() {
+	if (!$cheeta.isInitialized) {
+		$cheeta.isInitialized = true;
+		$cheeta.future = {evals: []};
+		$cheeta.model.init();	
+		$cheeta.location.init();
+		$cheeta.compiler.compile([], document.documentElement);
+	}
+}, false);
 $cheeta.directives = {
 	'*': []
 };
@@ -348,28 +353,52 @@ $cheeta.directive.onModelUpdate = function(elem, attr, parentModels, fn) {
 	elem.setAttribute(attr.name, expr);
 };
 $cheeta.compiler = {
-	recursiveCompile: function(parentModels, node, skipSiblings) {
+	recursiveCompile: function(parentModels, node, isDynamicContent, erase, skipSiblings) {
 		if (node) {
 			var models = parentModels;
 			if (node.nodeType === 1) {
-				models = this.compileDirectives(parentModels, node);
+				if (node.tagName.toLowerCase() == 'script' && !erase) {
+					var script = node;
+					if (isDynamicContent && (script.parentNode == null || script.parentNode.tagName.toLowerCase() != 'head') && 
+							(script.type == null || script.type == '' || script.type === 'text/javascript')) {
+						var content = script.innerHTML || "";
+						var head = document.getElementsByTagName("head")[0] || document.documentElement;
+					    script = document.createElement("script");
+					    script.type = "text/javascript";
+					    script.appendChild(document.createTextNode(content));
+					    head.insertBefore(script, head.firstChild);
+					    head.removeChild(script);
+					} else if (script.type === 'text/cheeta-template') {
+						$cheeta.templates[script.getAttribute('id')] = script.innerHTML || "";
+					}
+				}
+				if (erase) {
+					models = (this.cleanUpBindings(node) || []).concat(parentModels);
+				} else {
+					models = this.compileDirectives(parentModels, node, erase);
+				}
 			}
 			if (!node.__isFor_) {
-				this.recursiveCompile(models, node.firstChild);
+				this.recursiveCompile(models, node.firstChild, isDynamicContent, erase);
 			} else {
 				node.__isFor_ = undefined;
 			}
 			if (!skipSiblings) {
-				this.recursiveCompile(parentModels, node.nextSibling);
+				this.recursiveCompile(parentModels, node.nextSibling, isDynamicContent, erase);
 			}
 		}
 	},
-	compileElem: function(parentModels, elem, skipSiblings) {
+	compile: function(parentModels, elem, isDynamicContent) {
 		$cheeta.future.evals = [];
-		this.recursiveCompile(parentModels, elem, skipSiblings);
+		this.recursiveCompile(parentModels, elem, isDynamicContent, false, true);
 		this.runFutures();
 	},
-	cleanUpFromModel: function(elem) {
+	uncompile: function(parentModels, elem) {
+		$cheeta.future.evals = [];
+		this.recursiveCompile(parentModels, elem, false, true, true);
+		this.runFutures();
+	},
+	cleanUpBindings: function(elem) {
 		if (elem.__$cheeta_models_ != null) {
 			for (var k = 0; k < elem.__$cheeta_models_.length; k++) {
 				var model = elem.__$cheeta_models_[k];
@@ -383,10 +412,11 @@ $cheeta.compiler = {
 					}
 				}
 			}
+			return elem.__$cheeta_models_;
 		}
 	},
 	compileDirectives: function(parentModels, elem) {
-		this.cleanUpFromModel(elem);
+		this.cleanUpBindings(elem);
 		var attribs = [];
 		var additionalAttribs = [];
 		for (var k = 0; k < elem.attributes.length; k++) {
@@ -424,45 +454,24 @@ $cheeta.compiler = {
 			var directive = $cheeta.directive(attr.name);
 			if (directive != null) {
 				var models = directive.fn(elem, attr, parentModels);
-				if (models != null) {
-					if (elem.__$cheeta_models_ == null) elem.__$cheeta_models_ = [];
-					elem.__$cheeta_models_ = elem.__$cheeta_models_.concat(models);
-				}
 				parentModels = (models || []).concat(parentModels);				
 			}
 			if (elem.__isFor_) {
 				break;
 			}
 		}
+		elem.__$cheeta_models_ = parentModels;
 		return parentModels;
-	},
-	compile: function() {
-		$cheeta.model.init();
-		
-		$cheeta.future = $cheeta.future || {};
-		$cheeta.future.evals = [];
-		
-		$cheeta.location.initRoute();
-		
-		scripts = document.getElementsByTagName('script');
-		for (var i = 0; i < scripts.length; i++) {
-			var script = scripts[i];
-			if (script.getAttribute('type') === 'text/cj-template') {
-				$cheeta.templates[script.getAttribute('id')] = script.innerHTML;
-			}
-		}
-		var root = document.documentElement;
-		this.recursiveCompile([], root);
-		this.runFutures();
 	},
 	runFutures: function() {
 		for (var i = 0; i < $cheeta.future.evals.length; i++) {
-			eval($cheeta.future.evals[i]);
+			var expr = $cheeta.future.evals[i];
+			if (expr instanceof Function) {
+				expr();
+			} else {
+				eval(expr);
+			}
 		}
-//		for (var i = 0; i < $cheeta.futureUpdates.length; i++) {
-//			var binding = $cheeta.futureUpdates[i];
-//			binding.binding.update(binding.model);
-//		}
 	}
 };
 $cheeta.XHR = function() {
@@ -604,9 +613,7 @@ $cheeta.location = {
 					loc.notify(key, null, prev);
 				} 
 			}
-       }, false);
-	},
-	initRoute: function() {
+		}, false);
 		$cheeta.directive('route.').fn(document.body, {name: 'route.', value: '$cheeta.location.routes'}, []);
 	},
 	routes: {}
@@ -696,10 +703,9 @@ $cheeta.directive('for.', function(elem, attr, parentModels) {
 					arrayIndexModel.toExpr = function() {
 						return i;
 					}; 
-					$cheeta.compiler.compileElem(this.parentModels.concat(arrayIndexModel), clone, true);
+					$cheeta.compiler.compile(this.parentModels.concat(arrayIndexModel), clone);
 				}
 			}
-			//TODO splice with the same size
 		}
 	}
 	var model = $cheeta.model.bind(parentModels, name, binding);
@@ -766,7 +772,6 @@ $cheeta.directive('on*', function(elem, attr, parentModels) {
 
 $cheeta.directive('route.', function(elem, attr, parentModels) {
 	var _this = this;
-	var baseURL = window.location.protocol + "//" + window.location.hostname + (window.location.port && ":" + window.location.port) + window.location.pathname;
 	
 	$cheeta.directive.onModelUpdate(elem, attr, parentModels, function(val) {
 		var routes = val;
@@ -783,25 +788,7 @@ $cheeta.directive('route.', function(elem, attr, parentModels) {
 				}
 			}
 			if (url != null) {
-				new $cheeta.XHR().open('get', url.indexOf('/') === 0 ? baseURL + url : url).onSuccess(function(xhr) {
-					elem.innerHTML = xhr.data;
-					$cheeta.compiler.compileElem(parentModels, elem);
-					var scripts = document.getElementsByTagName('script');
-					for (var i = 0; i < scripts.length; i++) {
-						var script = scripts[i];
-						console.log(script);
-						if ((script.parentNode == null || script.parentNode.tagName.toLowerCase() != 'head') && 
-								(script.type == null || script.type == '' || script.type === 'text/javascript')) {
-							var content = script.text || script.textContent || script.innerHTML || "";
-							var head = document.getElementsByTagName("head")[0] || document.documentElement;
-						    script = document.createElement("script");
-						    script.type = "text/javascript";
-						    script.appendChild(document.createTextNode(content));
-						    head.insertBefore(script, head.firstChild);
-						    head.removeChild(script);
-						}
-					}
-				}).send();
+				$cheeta.directive('template.').fn(elem, {name: 'template.', value: url}, parentModels);
 			}
 		});
 	});
@@ -810,10 +797,23 @@ $cheeta.directive('route.', function(elem, attr, parentModels) {
 $cheeta.templates = {};
 
 $cheeta.directive('template.', function(elem, attr, parentModels) {
-	elem.innerHTML = $cheeta.templates[attr.value] || elem.innerHTML;
-	var children = elem.childNodes;
-	for (var i = 0; i < children.length; i++) {
-		$cheeta.compiler.compileElem(parentModels, children[i]);
+	var baseURL = window.location.protocol + "//" + window.location.hostname + (window.location.port && ":" + window.location.port) + window.location.pathname;
+
+	this.loadTemplate = function(elem, content) {
+		$cheeta.compiler.uncompile(parentModels, elem);
+		elem.innerHTML = content;
+		$cheeta.compiler.compile(parentModels, elem, true);
+	};
+	
+	var loadTemplate = this.loadTemplate;
+	
+	var content = $cheeta.templates[attr.value];
+	if (content != null) {
+		loadTemplate(elem, content);
+	} else {
+		new $cheeta.XHR().open('get', attr.value.indexOf('/') === 0 ? baseURL + attr.value : attr.value).onSuccess(function(xhr) {
+			loadTemplate(elem, xhr.data);
+		}).send();
 	}
 }, 900);
 

@@ -43,10 +43,9 @@ $cheeta.directive('for.', function(elem, attr, parentModels) {
 					arrayIndexModel.toExpr = function() {
 						return i;
 					}; 
-					$cheeta.compiler.compileElem(this.parentModels.concat(arrayIndexModel), clone, true);
+					$cheeta.compiler.compile(this.parentModels.concat(arrayIndexModel), clone);
 				}
 			}
-			//TODO splice with the same size
 		}
 	}
 	var model = $cheeta.model.bind(parentModels, name, binding);
