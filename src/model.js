@@ -202,7 +202,7 @@ $cheeta.model = $cheeta.model || {
 				if (parentModel.children[split[i]] == null) {
 					if (this.bindElement(parentModel, split[i], binding == null ? null : {
 							elem: binding.elem, 
-							attr: 'bind'
+							attrName: 'bind.'
 						}) == null) {
 						return null;
 					}
@@ -212,11 +212,10 @@ $cheeta.model = $cheeta.model || {
 		}
 		return this.bindElement(parentModel, name, binding);
 	},
-	init: function() {
-		$cheeta.model.root = new $cheeta.model.Model(null);
-		$cheeta.model.root.value = window;
-	}
 };
+
+$cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
+$cheeta.model.root.value = window;
 
 $cheeta.on = function(events, elem, fn) {
 	var split = events.split(' ');
@@ -231,7 +230,6 @@ window.addEventListener('load', function() {
 	if (!$cheeta.isInitialized) {
 		$cheeta.isInitialized = true;
 		$cheeta.future = {evals: []};
-		$cheeta.model.init();	
 		$cheeta.location.init();
 		$cheeta.compiler.compile([], document.documentElement);
 	}

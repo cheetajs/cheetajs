@@ -61,46 +61,51 @@ $cheeta.compiler = {
 			return elem.__$cheeta_models_;
 		}
 	},
-	compileDirectives: function(parentModels, elem) {
-		this.cleanUpBindings(elem);
-		var attribs = [];
+	compileDirectives: function(parentModels, elem, erase) {
+		var attrDirectives = [];
 		var additionalAttribs = [];
+		function addDirectiveToList(name) {
+			//TODO start from here
+			var directive = {name: name + '.', directives: $cheeta.directive.get(name)};
+			for (var j = attrDirectives.length - 1; j >= 0; j--) {
+				if (directive.order > attrDirectives[j].directive.order) {
+					attrDirectives.splice(j + 1, 0, directive);
+				}
+			}
+		};
 		for (var k = 0; k < elem.attributes.length; k++) {
 			var attr = elem.attributes[k];
 			if (attr.specified) {
 				var split = attr.name.split('.');
 				if (split[split.length - 1] == '') {
 					split.pop();
+				} else {
+					continue;
 				}
 				if (split.length > 1) {
 					for (var i = 0; i < split.length - 1; i++) {
+						addDirectiveToList(split[i] + '.');
 						additionalAttribs.push({name: split[i] + '.', value: attr.value});
 					}
 //					elem.removeAttribute(attr.name)
 				} else {
-					attribs.push(attr);
+					addDirectiveToList(attr.name);
 				}
 			}
 		}
-		for (var k = 0; k < additionalAttribs.length; k++) {
-			var attr = additionalAttribs[k];
+		while (additionalAttribs.length) {
+			var attr = additionalAttribs.pop();
 			elem.setAttribute(attr.name, attr.value);
-			attribs.push(elem.attributes[attr.name]);
 		}
-		attribs = attribs.sort(function(a, b) {
-			function order(d) {
-				return d == null ? $cheeta.directive('').order : d.order;  
-			}
-			return order($cheeta.directive(a.name)) - order($cheeta.directive(b.name));
-		});
-//		console.log('compiling attibutes', attribs);
-		for (var k = 0; k < attribs.length; k++) {
-			var attr = attribs[k];
-//			console.log('compiling attr', attr);
-			var directive = $cheeta.directive(attr.name);
-			if (directive != null) {
-				var models = directive.fn(elem, attr, parentModels);
-				parentModels = (models || []).concat(parentModels);				
+		
+		for (var k = 0; k < attrDirectives.length; k++) {
+			var attrDirective = attrDirectives[k];
+			if (attrDirective.directives != null) {
+				for (var i = 0; i < attrDirective.directives.length; i++) {
+					var directive = attrDirective.directives[i];
+					var models = directive.bind(elem, directive.name, parentModels);
+					parentModels = (models || []).concat(parentModels);
+				}
 			}
 			if (elem.__isFor_) {
 				break;

@@ -1,6 +1,6 @@
 (function() {
-	var fn = function(elem, attr, parentModels) {
-		var defs = attr.value.split(/ *; */g);
+	var fn = function(elem, attrName, parentModels) {
+		var defs = elem.getAttribute(attrName).split(/ *; */g);
 		var models = [];
 		
 		for (var i = 0; i < defs.length; i++) {
@@ -11,13 +11,21 @@
 
 			var binding = {
 				elem: elem,
-				attr: 'ctrl', 
+				attrName: 'ctrl', 
 				as: as, 
 			};
 			models.push($cheeta.model.bind(parentModels, name, binding));
 		}
 		return models;
 	};
-	$cheeta.directive('ctrl.', fn, 200);
-	$cheeta.directive('model.', fn, 201);
+	$cheeta.directive.define({
+		name: 'ctrl.', 
+		bind: fn, 
+		order: 200
+	});
+	$cheeta.directive.define({
+		name: 'model.', 
+		bind: fn, 
+		order: 200
+	});
 })();

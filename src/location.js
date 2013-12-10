@@ -81,7 +81,10 @@ $cheeta.location = {
 				} 
 			}
 		}, false);
-		$cheeta.directive('route.').fn(document.body, {name: 'route.', value: '$cheeta.location.routes'}, []);
+		if (document.body.getAttribute('route.') == null) {
+			document.body.setAttribute('route.', '$cheeta.location.routes');
+			$cheeta.directive.get('route.')[0].bind(document.body, 'route.', []);
+		}
 	},
 	routes: {}
 };

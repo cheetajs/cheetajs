@@ -1,9 +1,12 @@
-$cheeta.directive('bind.', function(elem, attr, parentModels) {
-	$cheeta.directive('value.').fn(elem, attr, parentModels);
-	$cheeta.on('keydown keyup change', elem, function(e) {
-		setTimeout(function() {
-			eval(elem.getAttribute(attr.name) + '=\'' + elem.value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'') + '\'');
-//			eval(elem.getAttribute(attr.name) + '=\'34334\'');
-		}, 0);
-	});
-}, 800);
+$cheeta.directive.define({
+	name: 'bind.',
+	bind: function(elem, attrName, parentModels) {
+		$cheeta.directive.get('value.')[0].bind(elem, attrName, parentModels);
+		$cheeta.on('keydown keyup change', elem, function(e) {
+			setTimeout(function() {
+				eval(elem.getAttribute(attrName) + '=\'' + elem.value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'') + '\'');
+			}, 0);
+		});
+	},
+	order: 800
+});
