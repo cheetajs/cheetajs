@@ -8,105 +8,13 @@ div {
 }
 </style>
 </head>
-<body data-ctrl.='app1'>
-	<input type='text' data-bind.=".alert"><span data-html.=".alert"></span>
-	<input type='text'>
-	<div data-ctrl.='.about'>
-		<div data-html.='.firstName'></div>
-		<input type='text' data-bind.='.lastName'>
-		<div data-html.='.lastName'></div>
-		Cars: 
-		<ul>
-			<li data-for.="car in .cars" >
-				<span data-text.="car"></span>
-				<input type='text' data-bind.="car">
-				<button data-onclick.onkeyup-space.="cars.splice($i, 1)">delete</button>
-			</li>
-		</ul>
-		<input type='text' data-bind.=".newCar">
-		<button tabindex="0" data-onclick.onkeyup-space.=".cars.push(.newCar)">+</button>
-		<button data-onclick.onkeyup-space.=".cars.pop()">remove last</button>
-		<button data-onclick.onkeyup-space.=".cars.shift()">remove first</button>
-		<button data-onclick.onkeyup-space.=".cars.unshift(.newCar)">add to the beginning</button>
-		<div>
-			Organization: <div data-text.=".work.org"></div>
-			Position: 
-			<div data-model.='.work.position'>
-				Title: <span data-text.=".title"></span> Salary: <span data-text.=".salary"></span>
-			</div>
-		</div>
-	</div>
-	<input type="text" data-bind.="command" data-onkeyup-enter.="result.push(eval(command))" data-init.="result = []">
-	<ul>
-		<li data-for.="r in result" data-text.="r.toString()"></li>
-	</ul>
-
-	<script type="text/cheeta-template" id="template1">
-		<div>TEMPLATE r.value <div data-text.="r.value">INNER TEMPLATE</div> c.value <div data-html.="c.value"></div>
-		<br/>c.value + r.value <span text.="c.value + r.value"></span> <div html.="r.value > 10 ? 'more tham 10' : (r.value < 10 ? 'less than 10': 'equal to 10')"></div>
-	</script>
-	
-	<script>
-	setTimeout(function() {
-		app1 = {
-			about: {
-				firstName: 'Danial1',
-				lastName: 'Farid1',
-				cars: ['Ferrari', 'Porche'],
-				work: {
-					org: 'free-lance',
-					position: {
-						title: 'software engineer',
-						salary: '100K'
-					}
-				}
-			},
-			projects: {
-				'github': ['angular-file-upload', 'cheetajs'],
-				'googlecode': ['gwt-annotation'],
-				'others': [{
-					site: 'cheetaj.com',
-					projectName: 'cheetaj'
-				}, {
-					site: 'cheetaj2.com',
-					projectName: 'cheetaj2'
-				}]
-			},
-			contact: {
-				tel: '416-878-5070',
-				address: '832 Bay Street',
-				postalCode: 'M5S 1Z6'
-			}
-		}
-	}, 1000);
-	$cheeta.location.watch(function(hash) {
-		console.log('path is changed', hash);
-	});
-	$cheeta.location.watch('myName', function(val, oldVal) {
-		console.log('name is changed', val, oldVal);
-	});
-	$cheeta.location.watch('myLastName', function(val, oldVal) {
-		console.log('last name is changed', val, oldVal);
-	});
-	$cheeta.location.watch('test', function(val, oldVal) {
-		console.log('test is changed', val, oldVal);
-	});
-	
-	setTimeout(function() {
-		window.location.hash = 'some/path/for/you';
-	}, 2000);
-	setTimeout(function() {
-		window.location.hash = 'some/path/for/you&myName=Danial&myLastName=&test=2';
-	}, 3000);
-	setTimeout(function() {
-		$cheeta.location.set('test', 5);
-		$cheeta.location.set('myLastName', 'lll');
-		$cheeta.location.set('another/path');
-	}, 4000);
-	setTimeout(function() {
-		$cheeta.location.routes = {'d': '/a.html', 'b': '/index.html'}
-		$cheeta.location.set('d');
-	}, 5000);
-	</script>
+<body data-ctrl.='app1' data-view.="app1.routes.find(Oo.state.path)">
 </body>
+<script>
+setTimeout(function() {
+	app1 = {};
+	app1.routes = new Oo.state.Routes({'1': '/first.html', '2': '/second.html'});
+	$cheeta.state.route = '1';
+}, 2000);
+</script>
 </html>

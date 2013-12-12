@@ -19,11 +19,7 @@ $cheeta.compiler = {
 							$cheeta.templates[script.getAttribute('id')] = script.innerHTML || "";
 						}
 					}
-					if (erase) {
-						models = (this.cleanUpBindings(node) || []).concat(parentModels);
-					} else {
-						models = this.compileDirectives(parentModels, node, erase);
-					}
+					models = this.compileDirectives(parentModels, node, erase);
 				}
 			}
 			if (!node.__isFor_) {
@@ -51,16 +47,23 @@ $cheeta.compiler = {
 		this.recursiveCompile(parentModels, elem, false, true, true);
 		this.runFutures();
 	},
+	uncompileChildren: function(parentModels, elem) {
+		$cheeta.future.evals = [];
+		this.recursiveCompile(parentModels, elem, false, true, true, true);
+		this.runFutures();
+	},
 	compileDirectives: function(parentModels, elem, erase) {		
 		var attrDirectives = this.getAttrDirectives(elem, erase);
 		for (var k = 0; k < attrDirectives.length; k++) {
 			var attrDirective = attrDirectives[k];
-			var models;
+			var models = [];
 			if (erase) {
 				if (attrDirective.directive.unbind) {
 					attrDirective.directive.unbind(elem, attrDirective.name, parentModels);
 				} 
-				$cheeta.directive.resolveModelRefs(elem, attrDirective.name, parentModels, new function(model) {
+				$cheeta.directive.resolveModelRefs(elem, attrDirective.name, parentModels, null, function(name) {
+					console.log('directive unbind: ', elem, attrDirective.name);
+					var model = $cheeta.model.bind(parentModels, name);
 					models.push(model);
 					for (var name in model.bindings) {
 						var bindings = model.bindings[name];
@@ -73,6 +76,7 @@ $cheeta.compiler = {
 					}
 				});
 			} else {
+				console.log('directive bind: ', elem, attrDirective.name);
 				var models = attrDirective.directive.bind(elem, attrDirective.name, parentModels);
 			}
 			parentModels = (models || []).concat(parentModels);

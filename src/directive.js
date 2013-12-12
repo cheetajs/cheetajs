@@ -38,22 +38,9 @@ $cheeta.directive = {
 			model.directives['/'].push(def.name.length - 1);
 		}
 	},
-	resolveModelRefs: function(elem, attrName, parentModels, updateFn) {
-		var resolveInterceptor = function(name) {
-			var binding = updateFn == null ? null : 
-				{
-					elem: elem, 
-					attrName: attrName,
-					baseAttrName: attrName.substring(attrName.indexOf('data-') == 0 ? 5 : 0, attrName.length - 1),
-					update: function() {
-						updateFn.apply(this, [model]);
-					}
-				};
-			var model = $cheeta.model.bind(parentModels, name, binding);
-			return model != null ? model.toExpr() : name;
-		};
-		var quote = null, regexpMod = false, result = '', index = -1;
-		var val = elem.getAttribute(attrName) + '\x1a';
+	tokenizeAttrVal: function(val, tokenFn) {
+		var quote = null, regexpMod = false, index = -1, token = '';
+		val += '\x1a';
 		for (var i = 0; i < val.length; i++) {
 			var ch = val.charAt(i);
 			if (quote != null) {
@@ -63,13 +50,13 @@ $cheeta.directive = {
 					}
 					quote = null;
 				}
-				result += ch;
+				token += ch;
 			} else {
 				if (regexpMod) {
 					if (ch < 'a' && ch > 'z') {
 						regexpMod = false;
 					}
-					result += ch;
+					token += ch;
 				} else if (ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' || ch == '!' || ch == '"' ||
 						(ch >= '%' && ch <= '/' && ch != '.') || (ch >= ':' && ch <= '?') || ch == '\x1a') {
 					if (ch == '\'' || ch == '"' || ch == '/') {
@@ -79,7 +66,7 @@ $cheeta.directive = {
 						var name = val.substring(index, i);
 						if (name === 'true' || name === 'false' || name === 'undefined' || name === 'null' || 
 							name === 'NaN' || !isNaN(name)) {
-							result += name;
+							token += name;
 						} else {
 							var ii = i;
 							while (val.charAt(ii) == ' ') {
@@ -88,13 +75,13 @@ $cheeta.directive = {
 							if (val.charAt(ii) == '(') {
 								var fnIndex = name.lastIndexOf('.');
 								if (fnIndex > -1) {
-									result += resolveInterceptor(name.substring(0, fnIndex)) + '.';
-									result += name.substring(fnIndex + 1);
+									tokens.model(name.substring(0, fnIndex));
+									tokens.literal(name.substring(fnIndex + 1));
 								} else {
-									result += name;
+									tokens.literal(name);
 								}
 							} else {
-								result += resolveInterceptor(name);
+								tokens.model(name);
 							}
 						}
 						index = -1;
@@ -102,19 +89,56 @@ $cheeta.directive = {
 					result += ch;
 				} else {
 					if (index == -1) {
+						tokens.literal(token);
 						index = i;
 					}
 				}
 			}
 		}
-		return result.substring(0, result.length - 1);
+		if (tokens.length > 0) {
+			var v = tokens[tokens.length - 1].value;
+			tokens[tokens.length - 1].value = v.substring(v.length - 1); 			
+		}
+		return tokens;
 	},
-	onModelUpdate: function(elem, attrName, parentModels, fn) {
-		var expr = $cheeta.directive.resolveModelRefs(elem, attrName, parentModels, function(model) {
-			var val = null;
-			try {
-				val = eval(elem.getAttribute(this.attrName));
-			} catch (e) {}
+	bindModels: function(elem, attrName, parentModels, updateFn) {
+		var baseAttrName = attrName.substring(attrName.indexOf('data-') == 0 ? 5 : 0, attrName.length - 1);
+		this.tokenizeAttrVal(elem.getAttribute(attrName), {
+			model: function(name) {
+				var model = null;
+				var binding = updateFn == null ? null : 
+					{
+						elem: elem, 
+						attrName: attrName,
+						baseAttrName: baseAttrName,
+						update: function() {
+							updateFn.apply(this, [model]);
+						}
+					};
+				var model = $cheeta.model.bind(parentModels, name, binding);
+				return model != null ? model.toExpr() : name;				
+			}
+		});
+	},
+	onModelValueChange: function(elem, attrName, parentModels, fn) {
+		this.bindModels(elem.getAttribute(attrName), {
+			model: function(name) {
+				var model = null;
+				var binding = updateFn == null ? null : 
+					{
+						elem: elem, 
+						attrName: attrName,
+						baseAttrName: baseAttrName,
+						update: function() {
+							updateFn.apply(this, [model]);
+						}
+					};
+				var model = $cheeta.model.bind(parentModels, name, binding);
+				return model != null ? model.toExpr() : name;				
+			}
+		});
+		var expr = $cheeta.directive.bindModelNames(elem, attrName, parentModels, function(model) {
+			var val = eval(elem.getAttribute(this.attrName));
 			fn.apply(this, [val]);
 		});
 		elem.setAttribute(attrName, expr);

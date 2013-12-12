@@ -1,6 +1,6 @@
 if (!$cheeta) {
 	var $cheeta = $cheeta || {};
-	window['$cheeta'] = $cheeta;
+	window['$cheeta'] = window['Oo'] = $cheeta;
 }
 
 $cheeta.model = $cheeta.model || {
@@ -83,12 +83,14 @@ $cheeta.model = $cheeta.model || {
 		}
 	},
 	update: function(model, val, oldVal) {
-		for (var name in model.bindings) {
-			var bindings = model.bindings[name];
-			for (var i = 0; i < bindings.length; i++) {
-				var binding = bindings[i];
-				if (binding.update) {
-					binding.update(val, oldVal);
+		if (val != oldVal) {
+			for (var name in model.bindings) {
+				var bindings = model.bindings[name];
+				for (var i = 0; i < bindings.length; i++) {
+					var binding = bindings[i];
+					if (binding.update) {
+						binding.update(val, oldVal);
+					}
 				}
 			}
 		}
@@ -119,8 +121,14 @@ $cheeta.model = $cheeta.model || {
 		if (value != null) {
 			var beforeValue = value[name];
 			try {
+				var alreadyDefined = model.parent.children && model.parent.children[name] != null; 
+				var prevProp = alreadyDefined ? null : Object.getOwnPropertyDescriptor(value, name);
 				Object.defineProperty(value, name, {
 			        set: function(val) {
+			        	if (prevProp && prevProp.set) {
+			        		prevProp.set.apply(value, arguments);
+			        	}
+			        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
 			        	var prevVal = model.value;
 			        	if (prevVal != val) {
 			        		model.value = val;
@@ -138,10 +146,10 @@ $cheeta.model = $cheeta.model || {
 			        	}
 					}, 
 					get: function() {
-			        	return model.value;
+						return (prevProp && prevProp.get && prevProp.get.apply(value)) || model.value;
 					},
 					enumerable: true,
-					configurable: true
+					configurable: true,
 				});
 			} catch(e) { 
 				if (!(e instanceof TypeError)) throw e;
@@ -165,7 +173,7 @@ $cheeta.model = $cheeta.model || {
 		}
 		return model;
 	},
-	bind: function(parentModels, name, binding) {
+	bind: function(parentModels, name) {
 		if (name == '$i') {
 			for (var i = parentModels.length - 1; i >= 0; i--) {
 				if (parentModels[i].name == '$i') {
@@ -230,7 +238,7 @@ window.addEventListener('load', function() {
 	if (!$cheeta.isInitialized) {
 		$cheeta.isInitialized = true;
 		$cheeta.future = {evals: []};
-		$cheeta.location.init();
+		$cheeta.state.init();
 		$cheeta.compiler.compile([], document.documentElement);
 	}
 }, false);
