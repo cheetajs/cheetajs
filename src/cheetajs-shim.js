@@ -3,3 +3,4 @@ if (window.attachEvent) {
 		this.attachEvent('on' + type, listener);
 	};
 }
+if (!window.console) console = {log: function() {}, error: function() {}};

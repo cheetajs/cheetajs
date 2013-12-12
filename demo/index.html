@@ -103,6 +103,10 @@ div {
 		$cheeta.location.set('myLastName', 'lll');
 		$cheeta.location.set('another/path');
 	}, 4000);
+	setTimeout(function() {
+		$cheeta.location.routes = {'d': '/a.html', 'b': '/index.html'}
+		$cheeta.location.set('d');
+	}, 5000);
 	</script>
 </body>
 </html>

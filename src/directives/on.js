@@ -6,7 +6,7 @@ $cheeta.keyconsts = {
 $cheeta.directive.define({
 	name: 'on*', 
 	bind: function(elem, attrName, parentModels) {
-		var expr = $cheeta.directive.resolveModelRefs(elem.getAttribute(attrName), attrName, parentModels);
+		var expr = $cheeta.directive.resolveModelRefs(elem, attrName, parentModels);
 		elem.setAttribute(attrName, expr);
 		
 		var baseAttrName = attrName.substring(attrName.indexOf('data-') == 0 ? 7 : 2, attrName.length - 1);

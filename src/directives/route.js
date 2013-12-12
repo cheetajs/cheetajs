@@ -17,7 +17,8 @@ $cheeta.directive.define({
 					}
 				}
 				if (url != null) {
-					$cheeta.directive.get('template.')[0].bind(elem, {name: 'template.', value: url}, parentModels);
+					elem.setAttribute('template.', url);
+					$cheeta.directive.get('template.')[0].bind(elem, 'template.', parentModels);
 				}
 			});
 		});
