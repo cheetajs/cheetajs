@@ -53,17 +53,14 @@ $cheeta.compiler = {
 		this.runFutures();
 	},
 	compileDirectives: function(parentModels, elem, erase) {		
-		var attrDirectives = this.getAttrDirectives(elem, erase);
+		var attrDirectives = this.getAttrDirectives(elem, erase, parentModels);
 		for (var k = 0; k < attrDirectives.length; k++) {
 			var attrDirective = attrDirectives[k];
 			var models = [];
 			if (erase) {
-				if (attrDirective.directive.unbind) {
-					attrDirective.directive.unbind(elem, attrDirective.name, parentModels);
-				} 
-				$cheeta.directive.resolveModelRefs(elem, attrDirective.name, parentModels, null, function(name) {
+				attrDirective.directive.unbind(elem, attrDirective.name, parentModels);
+				attrDirective.directive.resolveModelNames(elem, attrDirective.name, parentModels, function(model) {
 					console.log('directive unbind: ', elem, attrDirective.name);
-					var model = $cheeta.model.bind(parentModels, name);
 					models.push(model);
 					for (var name in model.bindings) {
 						var bindings = model.bindings[name];
@@ -87,11 +84,11 @@ $cheeta.compiler = {
 		}
 		return parentModels;
 	},
-	getAttrDirectives: function(elem, erase) {
+	getAttrDirectives: function(elem, erase, parentModels) {
 		var attrDirectives = [];
 		var additionalAttribs = [];
 		function addDirectiveToList(name) {
-			var directives = $cheeta.directive.get(name);
+			var directives = $cheeta.directive.get(name, parentModels);
 			for (var i = 0; i < directives.length; i++) {
 				var attrDirective = {name: name, directive: directives[i]}
 				var index = attrDirectives.length;

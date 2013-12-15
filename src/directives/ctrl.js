@@ -14,18 +14,10 @@
 				attrName: 'ctrl', 
 				as: as, 
 			};
-			models.push($cheeta.model.bind(parentModels, name, binding));
+			models.push($cheeta.model.define(parentModels, name).bind(binding));
 		}
 		return models;
 	};
-	$cheeta.directive.define({
-		name: 'ctrl.', 
-		bind: fn, 
-		order: 200
-	});
-	$cheeta.directive.define({
-		name: 'model.', 
-		bind: fn, 
-		order: 200
-	});
+	$cheeta.directive.add(new $cheeta.Directive('ctrl.').order(200).onBind(fn));
+	$cheeta.directive.add(new $cheeta.Directive('model.').order(200).onBind(fn));
 })();

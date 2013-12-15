@@ -1,8 +1,4 @@
-$cheeta.directive.define({
-	name: 'init.', 
-	bind: function(elem, attrName, parentModels) {
-		var expr = $cheeta.directive.resolveModelRefs(elem, attrName, parentModels);
-		$cheeta.future.evals.push(expr);
-	},
-	order: 700
-});
+$cheeta.directive.add(new $cheeta.Directive('init.').onBind(function(elem, attrName, parentModels) {
+	var expr = this.resolveModelNames(elem, attrName, parentModels);
+	$cheeta.future.evals.push(expr);
+}));

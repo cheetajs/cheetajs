@@ -1,12 +1,5 @@
-$cheeta.directive.define({
-	name: 'value.', 
-	bind: function(elem, attrName, parentModels) {
-		$cheeta.directive.onModelUpdate(elem, attrName, parentModels, function(val) {
-			if (elem.value != val) {
-				elem.value = val || null;
-			}
-		});
-	}, 
-	order: 600
-});
-
+$cheeta.directive.add(new $cheeta.Directive('value.').onValueChange(function(val, elem, attrName, parentModels) {
+	if (elem.value != val) {
+		elem.value = val || null;
+	}
+}));

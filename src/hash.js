@@ -1,4 +1,4 @@
-$cheeta.state = {
+$cheeta.hash = {
 	keyval: {},
 	watchers: {},
 	watch: function(key, fn) {
@@ -86,24 +86,24 @@ $cheeta.state = {
 			}
 		}, false);
 	},
-	Routes: function(map) {
-		map.find = function(path) {
-			var len = 0;
-			var url = null;
-			for (var key in map) {
-				if (path.indexOf(key) == 0 && len < key.length) {
-					len = key.length;
-					url = map[key];
-				}
-			}
-			return url;			
-		};
-		return map;
-	},
-	get path() {
+	get value() {
 		return window.location.hash.length > 0 ? window.location.hash.substring(1) : window.location.hash;
 	},
-	set path(h) {		
+	set value(h) {		
 		return window.location.hash = '#' + h;
 	}
 };
+$cheeta.route = $cheeta.route || function(map, hashVal) {
+	if (map == null) {
+		return null;
+	}
+	var len = 0;
+	var url = null;
+	for (var key in map) {
+		if (hashVal.indexOf(key) == 0 && len < key.length) {
+			len = key.length;
+			url = map[key];
+		}
+	}
+	return url;
+}

@@ -1,10 +1,4 @@
-$cheeta.directive.define({
-	name: '',
-	bind: function(elem, attrName, parentModels) {
-		$cheeta.directive.onModelUpdate(elem, attrName, parentModels, function(val) {
-			elem.setAttribute(this.baseAttrName, val);
-		});
-	},
-	order: 700
-});		
+$cheeta.directive.add(new $cheeta.Directive('').onValueChange(function(val, elem, attrName) {
+	elem.setAttribute(this.baseAttrName, val);
+}));
 
