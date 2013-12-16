@@ -12,5 +12,5 @@
 		if (this.fn[elem]) {
 			$cheeta(elem).off('keydown keyup change', this.fn[elem]);
 		}
-	}).order(800));
+	}).setOrder(800));
 })();

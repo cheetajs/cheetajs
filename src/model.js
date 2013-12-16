@@ -53,6 +53,11 @@ $cheeta.model = $cheeta.model || {
 			if (this.value == null) {
 				this.value = this.isArray ? [] : {};
 			}
+//			if (value[name] != null) {
+//				$cheeta.future.evals.push(function() {
+//					model.valueChange(value[name], null);
+//				});
+//			}
 			return model;
 		};
 		this.bind = function(binding) {
@@ -103,10 +108,6 @@ $cheeta.model = $cheeta.model || {
 				var result = Array.prototype.push.apply(this, arguments);
 				var newLen = this.length;
 				model.valueChange(newLen, len);
-//				for (var i = len; i < newLen; i++) {
-//					model.children[i].value = this[i];
-//					$cheeta.model.interceptProp(model.children[i], this, i);
-//				}
 				return result;
 			},
 			pop: function() {
@@ -130,10 +131,6 @@ $cheeta.model = $cheeta.model || {
 				var result = Array.prototype.splice.apply(this, arguments);
 				var newLen = this.length;
 				model.valueChange(newLen, len);
-//				for (var i = len; i < newLen; i++) {
-//					model.children[i].value = this[i];
-//					$cheeta.model.interceptProp(model.children[i], this, i);
-//				}
 				return result;
 			}
 		};
@@ -189,15 +186,6 @@ $cheeta.model = $cheeta.model || {
 				return;
 			}
 			value[name] = beforeValue;
-			if (value[name] != null) {
-				$cheeta.future.evals.push(function() {
-	//				$cheeta.model.update(model, val, prevVal);
-					model.valueChange(value[name], null);
-	//				if (value != null) {
-	//					value[name] = beforeValue;
-	//				} 
-				});
-			}
 		}
 	},
 	findParentModel: function(model, rootName) {
@@ -212,7 +200,7 @@ $cheeta.model = $cheeta.model || {
 	define: function(parentModels, name) {
 		return this.get(parentModels, name, true);
 	},
-	get: function(parentModels, name, defineIfNotExists) {
+	get: function(parentModels, name) {
 		if (parentModels == null) {
 			parentModels = [$cheeta.model.root];
 		}
@@ -247,14 +235,11 @@ $cheeta.model = $cheeta.model || {
 			parentModel = parentModel.parent;
 		} else {
 			for (var i = parentModel === $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
-				if (!defineIfNotExists && parentModel.children(split[i]) == null) {
-					return null;
-				}
 				parentModel.addChild(split[i])
 				parentModel = parentModel.children[split[i]];
 			}
 		}
-		return defineIfNotExists ? parentModel.addChild(name) : parentModel.children[name];
+		return parentModel.addChild(name);
 	}
 };
 
@@ -265,7 +250,7 @@ $cheeta.root = $cheeta.model.root;
 window.addEventListener('load', function() {
 	if (!$cheeta.isInitialized) {
 		$cheeta.isInitialized = true;
-		$cheeta.future = {evals: []};
+		$cheeta.future = {evals: [{}]};
 		$cheeta.hash.init();
 		$cheeta.compiler.compile([$cheeta.model.root], document.documentElement);
 	}

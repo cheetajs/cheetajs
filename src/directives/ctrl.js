@@ -18,6 +18,6 @@
 		}
 		return models;
 	};
-	$cheeta.directive.add(new $cheeta.Directive('ctrl.').order(200).onBind(fn));
-	$cheeta.directive.add(new $cheeta.Directive('model.').order(200).onBind(fn));
+	$cheeta.directive.add(new $cheeta.Directive('ctrl.').setOrder(200).onBind(fn));
+	$cheeta.directive.add(new $cheeta.Directive('model.').setOrder(200).onBind(fn));
 })();

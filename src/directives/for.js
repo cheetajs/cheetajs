@@ -1,4 +1,4 @@
-$cheeta.directive.add(new $cheeta.Directive('for.').order(100).onBind(function(elem, attrName, parentModels) {
+$cheeta.directive.add(new $cheeta.Directive('for.').setOrder(100).onBind(function(elem, attrName, parentModels) {
 	elem.__isFor_ = true;
 	var split = elem.getAttribute(attrName).split(/ +in +/g), name, arrayVar, as;
 	name = split[1];

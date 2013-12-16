@@ -23,7 +23,7 @@
 				elem.__$cheeta_view_is_loading = false;
 			}
 		}
-	}).order(900);
+	}).setOrder(900);
 	_this.baseURL = window.location.protocol + "//" + window.location.hostname + 
 		(window.location.port && ":" + window.location.port) + window.location.pathname;
 	_this.loadView = function(elem, content, parentModels) {

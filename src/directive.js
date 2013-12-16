@@ -3,9 +3,9 @@ $cheeta.Directive = function(name) {
 	this.isGlobal = function() {
 		return this.name.indexOf('*', this.name.length - 1) > -1; 
 	};
-	this.orderVal = 1000;
-	this.order = function(val) {
-		this.orderVal = val;
+	this.order = 1000;
+	this.setOrder = function(val) {
+		this.order = val;
 		return this;
 	};
 	this.onBind = function(fn) {
@@ -35,7 +35,7 @@ $cheeta.Directive = function(name) {
 		var models = [];
 		this.tokenizeAttrVal(elem.getAttribute(attrName), {
 			onVar: function(t) {
-				var model = $cheeta.model.get(parentModels, t, true)
+				var model = $cheeta.model.get(parentModels, t)
 				models.push(model);
 				resolvedVal += model.toExpr();
 				onModel && onModel(model);

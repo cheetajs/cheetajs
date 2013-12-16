@@ -32,25 +32,21 @@ $cheeta.compiler = {
 			}
 		}
 	},
-	compile: function(parentModels, elem, isAjaxLoaded) {
-		$cheeta.future.evals = [];
-		this.recursiveCompile(parentModels, elem, isAjaxLoaded, false, true);
+	doCompile: function() {
+		this.recursiveCompile.apply(this, arguments);
 		this.runFutures();
+	},
+	compile: function(parentModels, elem, isAjaxLoaded) {
+		this.doCompile(parentModels, elem, isAjaxLoaded, false, true);
 	},
 	compileChildren: function(parentModels, elem, isAjaxLoaded) {
-		$cheeta.future.evals = [];
-		this.recursiveCompile(parentModels, elem, isAjaxLoaded, false, true, true);
-		this.runFutures();
+		this.doCompile(parentModels, elem, isAjaxLoaded, false, true, true);
 	},
 	uncompile: function(parentModels, elem) {
-		$cheeta.future.evals = [];
-		this.recursiveCompile(parentModels, elem, false, true, true);
-		this.runFutures();
+		this.doCompile(parentModels, elem, false, true, true);
 	},
 	uncompileChildren: function(parentModels, elem) {
-		$cheeta.future.evals = [];
-		this.recursiveCompile(parentModels, elem, false, true, true, true);
-		this.runFutures();
+		this.doCompile(parentModels, elem, false, true, true, true);
 	},
 	compileDirectives: function(parentModels, elem, erase) {		
 		var attrDirectives = this.getAttrDirectives(elem, erase, parentModels);
@@ -75,6 +71,19 @@ $cheeta.compiler = {
 			} else {
 				console.log('directive bind: ', elem, attrDirective.name);
 				var models = attrDirective.directive.bind(elem, attrDirective.name, parentModels);
+				if (models) {
+					models.map(function(model) {
+						expr = model.toExpr()
+						if (!$cheeta.future.evals[0][expr]) {
+							$cheeta.future.evals[0][expr] = function() {
+								if (model.value != null) {
+									model.valueChange(model.value, null);
+								}
+							};   
+						}
+					});
+				}
+				
 			}
 			parentModels = (models || []).concat(parentModels);
 			
@@ -89,16 +98,16 @@ $cheeta.compiler = {
 		var additionalAttribs = [];
 		function addDirectiveToList(name) {
 			var directives = $cheeta.directive.get(name, parentModels);
+			var index;
 			for (var i = 0; i < directives.length; i++) {
-				var attrDirective = {name: name, directive: directives[i]}
-				var index = attrDirectives.length;
-				for (var j = attrDirectives.length - 1; j >= 0; j--) {
-					if (attrDirective.order > attrDirectives[j].directive.order) {
-						index = j + 1;
+				var attrDirective = {name: name, directive: directives[i]};
+				for (index = attrDirectives.length - 1; index >= 0; index--) {
+					if (attrDirective.directive.order > attrDirectives[index].directive.order) {
+						break;
 					}
 				}
 			}
-			attrDirectives.splice(index, 0, attrDirective);
+			attrDirectives.splice(index + 1, 0, attrDirective);
 		};
 		for (var k = 0; k < elem.attributes.length; k++) {
 			var attr = elem.attributes[k];
@@ -129,13 +138,19 @@ $cheeta.compiler = {
 		return attrDirectives;
 	},
 	runFutures: function() {
-		for (var i = 0; i < $cheeta.future.evals.length; i++) {
-			var expr = $cheeta.future.evals[i];
+		for (var key in $cheeta.future.evals[0]) {
+			var fn = $cheeta.future.evals[0][key];
+			delete $cheeta.future.evals[0][key];
+			fn();
+		}
+		while ($cheeta.future.evals.length - 1) {
+			var expr = $cheeta.future.evals.splice(-1, 1)[0];
 			if (expr instanceof Function) {
 				expr();
 			} else {
 				eval(expr);
 			}
 		}
+		$cheeta.future.evals = [{}];
 	}
 };
