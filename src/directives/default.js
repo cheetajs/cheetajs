@@ -1,4 +1,5 @@
 $cheeta.directive.add(new $cheeta.Directive('').onValueChange(function(val, elem, attrName) {
-	elem.setAttribute(this.baseAttrName, val);
+	var baseAttrName = attrName.substring(attrName.indexOf('data-') == 0 ? 5 : 0, attrName.length - 1);
+	elem.setAttribute(baseAttrName, val);
 }));
 

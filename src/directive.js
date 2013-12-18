@@ -17,6 +17,7 @@ $cheeta.Directive = function(name) {
 		}
 	};
 	this.bind = function(elem, attrName, parentModels) {
+		console.log('directive bind ', elem, attrName);
 		return this.bindFn ? this.bindFn.apply(this, arguments) : null;
 	};
 	this.onUnbind = function(fn) {
@@ -28,7 +29,12 @@ $cheeta.Directive = function(name) {
 		}
 	};
 	this.unbind = function(elem, attrName, parentModels) {
-		return this.unbindFn ? this.unbindFn.apply(this, arguments) : null;
+		var models = (this.unbindFn && this.unbindFn.apply(this, arguments)) || [];
+		this.resolveModelNames(elem, attrName, parentModels, function(model) {
+			console.log('directive unbind: ', elem, attrName);
+			models.push(model);
+			model.unbind(elem, attrName);
+		}, true);
 	};
 	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute) {
 		var resolvedVal = '';
@@ -106,25 +112,17 @@ $cheeta.Directive = function(name) {
 			}
 		}
 	};
-	
 	this.onValueChange = function(fn) {
 		var origBind = this.bindFn;
 		this.bindFn = function(elem, attrName, parentModels) {
-			if (origBind) origBind();
-			var baseAttrName = attrName.substring(attrName.indexOf('data-') == 0 ? 5 : 0, attrName.length - 1);
+			if (origBind) origBind();			
 			this.resolveModelNames(elem, attrName, parentModels, function(model) {
-				var binding = { 
-					elem: elem, 
-					attrName: attrName,
-					baseAttrName: baseAttrName,
-					onChange: function() {
-						var val = eval(elem.getAttribute(this.attrName));
-						fn.apply(this, [val, elem, attrName, parentModels]);
-					}
-				};
-				model.bind(binding);
+				model.bind(elem, attrName, null, function(elem, attrName) {
+					var val = eval(elem.getAttribute(attrName));
+					fn.apply(this, [val, elem, attrName, parentModels]);
+				});
 			});
-		}
+		};
 		return this;
 	};
 };
