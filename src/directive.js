@@ -35,7 +35,7 @@ $cheeta.Directive = function(name) {
 		var models = [];
 		this.tokenizeAttrVal(elem.getAttribute(attrName), {
 			onVar: function(t) {
-				var model = $cheeta.model.get(parentModels, t)
+				var model = $cheeta.model.createOrGetModel(parentModels, t)
 				models.push(model);
 				resolvedVal += model.toExpr();
 				onModel && onModel(model);

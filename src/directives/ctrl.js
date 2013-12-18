@@ -14,7 +14,7 @@
 				attrName: 'ctrl', 
 				as: as, 
 			};
-			models.push($cheeta.model.define(parentModels, name).bind(binding));
+			models.push($cheeta.model.createOrGetModel(parentModels, name).bind(binding));
 		}
 		return models;
 	};

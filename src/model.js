@@ -40,7 +40,7 @@ $cheeta.model = $cheeta.model || {
 			
 			return expr.substring(1);
 		};
-		this.addChild = function(name) {
+		this.createOrGetChild = function(name) {
 			var model = this.children[name];
 			if (model === undefined) {
 				model = new $cheeta.model.Model();
@@ -62,11 +62,15 @@ $cheeta.model = $cheeta.model || {
 		};
 		this.bind = function(binding) {
 			if (binding != null) {
+				console.log('directive bind: ', binding.elem, binding.attrName);
 				var bindName = binding.as || this.name;
 				if (this.bindings[bindName] == null) {
 					this.bindings[bindName] = [];
 				}
 				this.bindings[bindName].push(binding);
+				if (binding.onChange != null && this.value != null) {
+					$cheeta.future.evals[0][binding.attrName ? binding.elem.attributes[binding.attrName] : binding.elem + binding.onChange] = binding;
+				}
 			}
 			return this;
 		};
@@ -197,10 +201,7 @@ $cheeta.model = $cheeta.model || {
 		}
 		return model;
 	},
-	define: function(parentModels, name) {
-		return this.get(parentModels, name, true);
-	},
-	get: function(parentModels, name) {
+	createOrGetModel: function(parentModels, name) {
 		if (parentModels == null) {
 			parentModels = [$cheeta.model.root];
 		}
@@ -235,11 +236,10 @@ $cheeta.model = $cheeta.model || {
 			parentModel = parentModel.parent;
 		} else {
 			for (var i = parentModel === $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
-				parentModel.addChild(split[i])
-				parentModel = parentModel.children[split[i]];
+				parentModel = parentModel.children[split[i]] || parentModel.createOrGetChild(split[i]);
 			}
 		}
-		return parentModel.addChild(name);
+		return parentModel.createOrGetChild(name);
 	}
 };
 

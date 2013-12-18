@@ -40,7 +40,7 @@ $cheeta.model = $cheeta.model || {
 			
 			return expr.substring(1);
 		};
-		this.addChild = function(name) {
+		this.createOrGetChild = function(name) {
 			var model = this.children[name];
 			if (model === undefined) {
 				model = new $cheeta.model.Model();
@@ -62,11 +62,15 @@ $cheeta.model = $cheeta.model || {
 		};
 		this.bind = function(binding) {
 			if (binding != null) {
+				console.log('directive bind: ', binding.elem, binding.attrName);
 				var bindName = binding.as || this.name;
 				if (this.bindings[bindName] == null) {
 					this.bindings[bindName] = [];
 				}
 				this.bindings[bindName].push(binding);
+				if (binding.onChange != null && this.value != null) {
+					$cheeta.future.evals[0][binding.attrName ? binding.elem.attributes[binding.attrName] : binding.elem + binding.onChange] = binding;
+				}
 			}
 			return this;
 		};
@@ -197,10 +201,7 @@ $cheeta.model = $cheeta.model || {
 		}
 		return model;
 	},
-	define: function(parentModels, name) {
-		return this.get(parentModels, name, true);
-	},
-	get: function(parentModels, name) {
+	createOrGetModel: function(parentModels, name) {
 		if (parentModels == null) {
 			parentModels = [$cheeta.model.root];
 		}
@@ -235,11 +236,10 @@ $cheeta.model = $cheeta.model || {
 			parentModel = parentModel.parent;
 		} else {
 			for (var i = parentModel === $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {
-				parentModel.addChild(split[i])
-				parentModel = parentModel.children[split[i]];
+				parentModel = parentModel.children[split[i]] || parentModel.createOrGetChild(split[i]);
 			}
 		}
-		return parentModel.addChild(name);
+		return parentModel.createOrGetChild(name);
 	}
 };
 
@@ -292,7 +292,7 @@ $cheeta.Directive = function(name) {
 		var models = [];
 		this.tokenizeAttrVal(elem.getAttribute(attrName), {
 			onVar: function(t) {
-				var model = $cheeta.model.get(parentModels, t)
+				var model = $cheeta.model.createOrGetModel(parentModels, t)
 				models.push(model);
 				resolvedVal += model.toExpr();
 				onModel && onModel(model);
@@ -487,21 +487,7 @@ $cheeta.compiler = {
 					}
 				});
 			} else {
-				console.log('directive bind: ', elem, attrDirective.name);
-				var models = attrDirective.directive.bind(elem, attrDirective.name, parentModels);
-				if (models) {
-					models.map(function(model) {
-						expr = model.toExpr()
-						if (!$cheeta.future.evals[0][expr]) {
-							$cheeta.future.evals[0][expr] = function() {
-								if (model.value != null) {
-									model.valueChange(model.value, null);
-								}
-							};   
-						}
-					});
-				}
-				
+				var models = attrDirective.directive.bind(elem, attrDirective.name, parentModels);				
 			}
 			parentModels = (models || []).concat(parentModels);
 			
@@ -556,20 +542,20 @@ $cheeta.compiler = {
 		return attrDirectives;
 	},
 	runFutures: function() {
-		for (var key in $cheeta.future.evals[0]) {
-			var fn = $cheeta.future.evals[0][key];
-			delete $cheeta.future.evals[0][key];
-			fn();
+		var runs = $cheeta.future.evals.slice(0);
+		$cheeta.future.evals = [{}];
+		for (var key in runs[0]) {
+			console.log('onchange ', key, runs[0][key].elem, runs[0][key].attrName)
+			runs[0][key].onChange();
 		}
-		while ($cheeta.future.evals.length - 1) {
-			var expr = $cheeta.future.evals.splice(-1, 1)[0];
+		for (var i = 0; i < runs.length; i++) {
+			var expr = runs[i];
 			if (expr instanceof Function) {
 				expr();
 			} else {
 				eval(expr);
 			}
 		}
-		$cheeta.future.evals = [{}];
 	}
 };
 $cheeta.XHR = function() {
@@ -662,7 +648,7 @@ $cheeta.XHR.prototype = new XMLHttpRequest();
 				attrName: 'ctrl', 
 				as: as, 
 			};
-			models.push($cheeta.model.define(parentModels, name).bind(binding));
+			models.push($cheeta.model.createOrGetModel(parentModels, name).bind(binding));
 		}
 		return models;
 	};
@@ -725,7 +711,7 @@ $cheeta.directive.add(new $cheeta.Directive('for.').setOrder(100).onBind(functio
 			}
 		}
 	}
-	var model = $cheeta.model.define(parentModels, name).bind(binding);
+	var model = $cheeta.model.createOrGetModel(parentModels, name).bind(binding);
 //	binding.parentModels = [model.parent].concat(parentModels);
 	binding.parentModels = parentModels;
 

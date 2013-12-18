@@ -69,21 +69,7 @@ $cheeta.compiler = {
 					}
 				});
 			} else {
-				console.log('directive bind: ', elem, attrDirective.name);
-				var models = attrDirective.directive.bind(elem, attrDirective.name, parentModels);
-				if (models) {
-					models.map(function(model) {
-						expr = model.toExpr()
-						if (!$cheeta.future.evals[0][expr]) {
-							$cheeta.future.evals[0][expr] = function() {
-								if (model.value != null) {
-									model.valueChange(model.value, null);
-								}
-							};   
-						}
-					});
-				}
-				
+				var models = attrDirective.directive.bind(elem, attrDirective.name, parentModels);				
 			}
 			parentModels = (models || []).concat(parentModels);
 			
@@ -138,19 +124,19 @@ $cheeta.compiler = {
 		return attrDirectives;
 	},
 	runFutures: function() {
-		for (var key in $cheeta.future.evals[0]) {
-			var fn = $cheeta.future.evals[0][key];
-			delete $cheeta.future.evals[0][key];
-			fn();
+		var runs = $cheeta.future.evals.slice(0);
+		$cheeta.future.evals = [{}];
+		for (var key in runs[0]) {
+			console.log('onchange ', key, runs[0][key].elem, runs[0][key].attrName)
+			runs[0][key].onChange();
 		}
-		while ($cheeta.future.evals.length - 1) {
-			var expr = $cheeta.future.evals.splice(-1, 1)[0];
+		for (var i = 0; i < runs.length; i++) {
+			var expr = runs[i];
 			if (expr instanceof Function) {
 				expr();
 			} else {
 				eval(expr);
 			}
 		}
-		$cheeta.future.evals = [{}];
 	}
 };

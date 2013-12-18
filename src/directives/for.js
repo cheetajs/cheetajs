@@ -48,7 +48,7 @@ $cheeta.directive.add(new $cheeta.Directive('for.').setOrder(100).onBind(functio
 			}
 		}
 	}
-	var model = $cheeta.model.define(parentModels, name).bind(binding);
+	var model = $cheeta.model.createOrGetModel(parentModels, name).bind(binding);
 //	binding.parentModels = [model.parent].concat(parentModels);
 	binding.parentModels = parentModels;
 
