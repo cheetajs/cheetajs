@@ -33,7 +33,7 @@ $cheeta.Directive = function(name) {
 		this.resolveModelNames(elem, attrName, parentModels, function(model) {
 			console.log('directive unbind: ', elem, attrName);
 			models.push(model);
-			model.unbind(elem, attrName);
+			model.unbind(elem, attrName, this.bindFn);
 		}, true);
 	};
 	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute) {
@@ -117,7 +117,7 @@ $cheeta.Directive = function(name) {
 		this.bindFn = function(elem, attrName, parentModels) {
 			if (origBind) origBind();			
 			this.resolveModelNames(elem, attrName, parentModels, function(model) {
-				model.bind(elem, attrName, null, function(elem, attrName) {
+				model.addChangeListener(function() {
 					var val = eval(elem.getAttribute(attrName));
 					fn.apply(this, [val, elem, attrName, parentModels]);
 				});

@@ -25,7 +25,7 @@ if (!$cheeta) {
 $cheeta.model = $cheeta.model || {
 	Model: function(parent, name) {
 		this.value = undefined;
-		this.bindings = {};
+		this.listeners = [];
 		this.parent = parent;
 		this.names = [name];
 		this.children = {};
@@ -53,27 +53,29 @@ $cheeta.model = $cheeta.model || {
 			}
 			return model;
 		};
-		this.bind = function(elem, attrName, alias, onChange) {
-			console.log('model bind: ', elem, attrName, alias);
+		this.getElemBindings = function(elem, attrName, onChange) {
+			return null;
+		};
+		this.alias = function(alias) {
 			if (alias != this.names[0]) {
 				this.names.push(alias);
-			}
+			}			
+		};
+		this.addChangeListener = function(onChange) {
 			if (onChange) {
-				if (!this.bindings[elem]) this.bindings[elem] = {};
-				this.bindings[elem][attrName] = onChange;
+				this.listeners.push(onChange);
 				if (this.value != null) {
-					$cheeta.future.evals[0][elem] = $cheeta.future.evals[0][elem] || {};
-					$cheeta.future.evals[0][elem][attrName] = onChange;
+					$cheeta.future.evals.push(onChange);
 				}
 			}
-			return this;
+			return onChange;
 		};
-		this.unbind = function(elem, attrName) {
-			console.log('model unbind: ', elem, attr);
-			if (this.bindings[elem]) {
-				delete this.bindings[elem][attrName];
+		this.removeChangeListener = function(onChange) {
+			var index = this.listeners.indexOf(onChange);
+			if (index > -1) {
+				return this.listeners.splice(index, 1);
 			}
-			return this;
+			return null;
 		};
 		this.valueChange = function(val, oldVal) {
 			if (val != oldVal) {
