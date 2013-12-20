@@ -53,19 +53,19 @@ $cheeta.model = $cheeta.model || {
 			}
 			return model;
 		};
-		this.getElemBindings = function(elem, attrName, onChange) {
-			return null;
-		};
 		this.alias = function(alias) {
-			if (alias != this.names[0]) {
+			if (alias != null && alias != this.names[0]) {
 				this.names.push(alias);
 			}			
 		};
-		this.addChangeListener = function(onChange) {
+		this.addChangeListener = function(onChange, target) {
 			if (onChange) {
-				this.listeners.push(onChange);
+				var fn = function() {
+					onChange.apply(target, arguments);
+				};
+				this.listeners.push(fn);
 				if (this.value != null) {
-					$cheeta.future.evals.push(onChange);
+					$cheeta.future.evals.push(fn);
 				}
 			}
 			return onChange;
@@ -79,10 +79,8 @@ $cheeta.model = $cheeta.model || {
 		};
 		this.valueChange = function(val, oldVal) {
 			if (val != oldVal) {
-				for (var elem in this.bindings) {
-					for (var attrName in this.bindings[elem]) {
-						this.bindings[elem][attrName].onChange(val, oldVal);
-					}
+				for (var i = 0; i < this.listeners.length; i++) {
+					this.listeners[i](val, oldVal);
 				}
 			}
 			return this;
@@ -200,13 +198,19 @@ $cheeta.model = $cheeta.model || {
 		}
 		return model;
 	},
+	get: function(ref) {
+		return this.createOrGetModel(null, ref); 
+	},
 	createOrGetModel: function(parentModels, name) {
+		if (name == null) {
+			return $cheeta.model.root;
+		}
 		if (parentModels == null) {
 			parentModels = [$cheeta.model.root];
 		}
-		if (name == '$i') {
+		if (name === '$i') {
 			for (var i = parentModels.length - 1; i >= 0; i--) {
-				if (parentModels[i].name == '$i') {
+				if (parentModels[i].names[0] == '$i') {
 					return parentModels[i];
 				}
 			}
@@ -228,7 +232,7 @@ $cheeta.model = $cheeta.model || {
 			}
 		}
 		if (split.length == 1 && parentModel !== $cheeta.model.root) {
-			name = parentModel.name;
+			name = parentModel.names[0];
 			parentModel = parentModel.parent;
 		} else {
 			for (var i = parentModel === $cheeta.model.root ? 0 : 1; i < split.length - 1; i++) {

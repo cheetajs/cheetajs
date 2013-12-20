@@ -54,9 +54,9 @@ $cheeta.compiler = {
 			var attrDirective = attrDirectives[k];
 			var models;
 			if (erase) {
-				models = attrDirective.directive.unbind(elem, attrDirective.attrName, parentModels);
+				models = attrDirective.directive.detach(elem, attrDirective.attrName, parentModels);
 			} else {
-				models = attrDirective.directive.bind(elem, attrDirective.attrName, parentModels);				
+				models = attrDirective.directive.attach(elem, attrDirective.attrName, parentModels);				
 			}
 			parentModels = (models || []).concat(parentModels);
 			
@@ -70,7 +70,7 @@ $cheeta.compiler = {
 		var attrDirectives = [];
 		var additionalAttribs = [];
 		function addDirectiveToList(attr) {
-			var directives = $cheeta.directive.get(attr.name, parentModels);
+			var directives = $cheeta.Directive.get(attr.name, parentModels);
 			for (var i = 0; i < directives.length; i++) {
 				var attrDirective = {attrName: attr.name, directive: directives[i]};
 				var index;

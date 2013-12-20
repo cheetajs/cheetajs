@@ -1,4 +1,5 @@
-$cheeta.XHR = function() {
+$cheeta.XHR = function(target) {
+	target = target || this;
 	var origSend = this.send;
 	var origOpen = this.open;
 	var xhr = new XMLHttpRequest();
@@ -30,19 +31,19 @@ $cheeta.XHR = function() {
 		if (xhr.readyState == 4) {
 			if (200 <= xhr.status && xhr.status < 300) {
 				for (var i = 0; i < successCallbacks.length; i++) {
-					successCallbacks[i].apply(xhr, [xhr]);
+					successCallbacks[i].apply(target, [xhr]);
 				}
 			} else {
 				for (var i = 0; i < errorCallbacks.length; i++) {
-					errorCallbacks[i].apply(xhr, [xhr]);
+					errorCallbacks[i].apply(target, [xhr]);
 				}
 			}
 			for (var i = 0; i < completeCallbacks.length; i++) {
-				completeCallbacks[i].apply(xhr, [xhr]);
+				completeCallbacks[i].apply(target, [xhr]);
 			}
         }
 		for (var i = 0; i < stateChangeCallbacks.length; i++) {
-			stateChangeCallbacks[i].apply(xhr, [xhr]);
+			stateChangeCallbacks[i].apply(target, [xhr]);
 		}		
 	};
 	Object.defineProperty(xhr, 'data', {
