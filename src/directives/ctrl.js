@@ -1,6 +1,6 @@
 (function() {
 	var attach = function(elem, attrName, parentModels) {
-		var defs = elem.getAttribute(attrName).split(/ *; */g);
+		var defs = elem.getAttribute(attrName).split(/ *, */g);
 		var models = [];
 		
 		for (var i = 0; i < defs.length; i++) {
