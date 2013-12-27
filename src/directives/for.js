@@ -1,13 +1,8 @@
 new $cheeta.Directive('for.').setOrder(100).onAttach(function(elem, attrName, parentModels) {
-	elem.__isFor_ = true;
-	var split = elem.getAttribute(attrName).split(/ +in +/g);
-	var name = split[1];
-	var arrayVar = split[0];
-	split = name.split(/ +as +/g);
-	name = split[0];
-	var as = split.length > 1 ? split[1] : null;
-	var elems = [];
-	var onChange = function(newLen, oldLen) {
+	var parse = this.parseAttr(elem.getAttribute(attrName));
+	var name = parse.name, as = parse.as, arrayVar = parse.arrayVar;
+	var onChange = function(e) {
+		var newLen = e.detail.value, oldLen = e.detail.oldValue;
 		if (newLen instanceof Object || oldLen instanceof Object) {
 //				$cheeta.model.interceptArray(newLen, this.update);
 			newLen = newLen == null ? 0 : newLen.length;
@@ -15,17 +10,16 @@ new $cheeta.Directive('for.').setOrder(100).onAttach(function(elem, attrName, pa
 		}
 		if (oldLen > newLen) {
 			for (var i = oldLen - 1; i >= newLen; i--) {
-				var rmElem = elems.pop();
+				var rmElem = elem.previousSibling;
 				rmElem.parentNode.removeChild(rmElem);
 				delete model.children[i];
 			}
 		} else if (oldLen < newLen) {
 			for (var i = oldLen; i < newLen; i++) {
 				var clone = elem.cloneNode();
-				elems.push(clone);
 				clone.removeAttribute('for.');
 				clone.removeAttribute('data-for.');
-				clone.setAttribute('model.', name + '.' + i + ' as ' + arrayVar + 
+				clone.setAttribute('model.', name + '[' + i + '] as ' + arrayVar + 
 						(elem.getAttribute('model.') ? (';' + elem.getAttribute('model.').value) : '')); 
 				clone.style.display = '';
 				elem.parentNode.insertBefore(clone, elem);
@@ -38,11 +32,24 @@ new $cheeta.Directive('for.').setOrder(100).onAttach(function(elem, attrName, pa
 		}
 	}
 	var model = $cheeta.model.createOrGetModel(parentModels, name);
-	model.addChangeListener(onChange, this);
+	model.bindModelChange(elem, attrName, onChange);
 	model.alias(as);
-//	binding.parentModels = parentModels;
 
 	elem.style.display = 'none';
 	model.isArray = true;
 	return [model];
-});
+}).onDetach(function(elem, attrName, parentModels) {
+	var parse = this.parseAttr(elem.getAttribute(attrName));
+	var name = parse.name;
+	var model = $cheeta.model.createOrGetModel(parentModels, name);
+	model.unbindModelChange(elem, attrName);
+	return [model];
+}).parseAttr = function(val) {
+	var split = val.split(/ +in +/g);
+	var name = split[1];
+	var arrayVar = split[0];
+	split = name.split(/ +as +/g);
+	name = split[0];
+	var as = split.length > 1 ? split[1] : null;
+	return {as: as, name: name, arrayVar: arrayVar};
+};

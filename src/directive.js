@@ -8,82 +8,75 @@ $cheeta.Directive = function(name, model) {
 		this.order = val;
 		return this;
 	};
-	this.onAttach = function(fn) {
-		this.attach = fn;
+	this.onAttach = function(attachFn) {
+		this.attach = attachFn;
 		return this;
 	};
-	this.onDetach = function(fn) {
-		this.detach = fn;
+	this.onDetach = function(detachFn) {
+		this.detach = detachFn;
 		return this;
 	};
-	this.onModelChange = function(fn) {
-		this.modelChangeListeners = this.modelChangeListeners || {};
+	this.onModelValueChange = function(changeFn) {
 		var origAttach = this.attach;
-		this.onAttach(function(elem, attrName, parentModels) {
+		var origDetach = this.detach;
+		this.attach = function(elem, attrName, parentModels) {
 			var models = []
-			if (origAttach) origAttach();			
+			if (origAttach) origAttach.apply(this);			
 			this.resolveModelNames(elem, attrName, parentModels, function(model) {
 				models.push(model);
-				this.modelChangeListeners[this.id(elem)] = model.addChangeListener(function() {
+				var _this = this; 
+				model.bindModelChange(elem, attrName, function(e) {
 					var val = eval(elem.getAttribute(attrName));
-					fn.apply(this, [val, elem, attrName, parentModels]);
-				}, this);
+					console.log('val: ' + val, attrName, this.names);
+					changeFn.apply(_this, [val, elem, attrName, parentModels]);
+				});
 			});
 			return models;
-		});
-		this.onDetach(function(elem, attrName, parentModels) {
+		}
+		this.detach = function(elem, attrName, parentModels) {
 			var models = []; 
+			if (origDetach) origDetach.apply(this);
 			this.resolveModelNames(elem, attrName, parentModels, function(model) {
-				console.log('directive unbind: ', elem, attrName);
 				models.push(model);
-				model.removeChangeListener(this.modelChangeListeners[this.id(elem)]);
+				model.unbindModelChange(elem, attrName);
 			}, true);
 			return models;
-		});
-
+		}
 		return this;
 	};
-	this.lastId = String.fromCharCode(33); 
-	this.nextId = function() {
-		if (this.lastId.charCodeAt(0) === 126) {
-			this.lastId = String.fromCharCode(33) + this.lastId;
-		}
-		this.lastId[0] = String.fromCharCode(this.lastId.charCodeAt(0) + 1);
-		return this.lastId;
-	}
-	this.id = function(elem) {
-		return elem.__$cheeta__id_ || (elem.__$cheeta__id_ = this.this.nextId());
-	}; 
+//	this.lastId = String.fromCharCode(33); 
+//	this.nextId = function() {
+//		if (this.lastId.charCodeAt(0) === 126) {
+//			this.lastId = String.fromCharCode(33) + this.lastId;
+//		}
+//		this.lastId[0] = String.fromCharCode(this.lastId.charCodeAt(0) + 1);
+//		return this.lastId;
+//	}
+//	this.id = function(elem) {
+//		return elem.__$cheeta__id_ || (elem.__$cheeta__id_ = this.this.nextId());
+//	}; 
 	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute) {
-		var models = [], directive = this;
+		var directive = this;
 		resolvedVal = this.parseModelVars(elem.getAttribute(attrName), function(modelRef) {
 			var model = $cheeta.model.createOrGetModel(parentModels, modelRef);
-			models.push(model);
-			onModel && onModel.apply(directive, [model]);
-			return model.toExpr();
+			if (model instanceof Array) {
+				return model[0].toExpr() + '.' + model[1];
+			} else {
+				onModel && onModel.call(directive, model);
+				return model.toExpr();
+			}
 		});
 		skipSetAttribute || elem.setAttribute(attrName, resolvedVal);
 		return resolvedVal;
-	};
+	},
+	this.modelVarRegExp = /(((((\. *)?[^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+)|\[ *([^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+|'(\\'|[^'])*') *\]) *)+\(?)|('(\\'|[^'])*')/g,
 	this.parseModelVars = function(val, modelCallback) {
-		var quote = false;
-		return val.replace(/('|"|[^ !%-\-/:-?\[\]\^{-~\t\r\n"']+)/gi, function(match, p1, offset, string) {
-			console.log(match,p1,offset,string);
-			if (match == '\'' || match == '"') {
-				if (string.charAt(offset - 1) !== '\\') {
-					quote = !quote;
-				}
-				return match;
-			}
-			if (quote) {
+		return val.replace(this.modelVarRegExp, function(match) {
+			if (match.charAt(0) == '\'' || match.charAt(0) == '"' || match === 'true' || match === 'false' || 
+					match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match)) {
 				return match;
 			} else {
-				if (match === 'true' || match === 'false' || match === 'undefined' || match === 'null' || 
-						match === 'NaN' || !isNaN(match) || string.charAt(offset + match.length) == '(') {
-					return match;
-				} else {
-					return modelCallback.apply(this, [match]);
-				}
+				return modelCallback.call(this, match);
 			}
 		});
 	};
@@ -154,7 +147,6 @@ $cheeta.Directive.get = function(name, parentModels) {
 		name = name.substring(5);
 	}
 	var endsWithDot = name.indexOf('.', name.length - 1) > -1;
-	var directives = [];
 	parentModels = parentModels || [$cheeta.model.root];
 	for (var i = 0; i < parentModels.length; i++) {
 		var model = parentModels[i];
@@ -164,14 +156,14 @@ $cheeta.Directive.get = function(name, parentModels) {
 			for (var k = 0; k < indices.length; k++) {
 				directive = model.directives[name.substring(0, indices[k]) + '*'];
 				if (directive != null) {
-					directives.push(directive);
+					return directive;
 				}
 			}
 		} else {
 			if (directive != null) {
-				directives.push(directive);
+				return directive;
 			}
 		}
 	}
-	return directives.length == 0 ? $cheeta.Directive.get('') : directives;
+	return $cheeta.Directive.get('');
 }

@@ -1,4 +1,4 @@
-new $cheeta.Directive('html.').onModelChange(function(val, elem, attrName, parentModels) {
+new $cheeta.Directive('html.').onModelValueChange(function(val, elem) {
 	if (val != elem.innerHTML) {
 		elem.innerHTML = val || '';
 	}

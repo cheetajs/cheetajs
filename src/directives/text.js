@@ -1,4 +1,4 @@
-new $cheeta.Directive('text.').onModelChange(function(val, elem, attrName, parentModels) {
+new $cheeta.Directive('text.').onModelValueChange(function(val, elem) {
 	elem.innerHTML = '';
 	elem.appendChild(document.createTextNode(val || ''));
 	console.log('innerhtml after: ' +  elem.innerHTML);

@@ -14,6 +14,6 @@
 		}
 		return models;
 	};
-	new $cheeta.Directive('ctrl.').setOrder(200).onAttach(attach);
-	new $cheeta.Directive('model.').setOrder(200).onAttach(attach);
+	new $cheeta.Directive('ctrl.').setOrder(200).onAttach(attach).onDetach(attach);
+	new $cheeta.Directive('model.').setOrder(200).onAttach(attach).onDetach(attach);
 })();

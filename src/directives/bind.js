@@ -6,9 +6,10 @@
 				eval(elem.getAttribute(attrName) + '=\'' + elem.value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'') + '\'');
 			}, 0);
 		}
-		$cheeta.Directive.get('value.')[0].attach(elem, attrName, parentModels);
+		$cheeta.Directive.get('value.').attach(elem, attrName, parentModels);
 		$cheeta(elem).on('keydown keyup change', this.fn[elem]);
 	}).onDetach(function(elem, attrName, parentModels) {
+		$cheeta.Directive.get('value.').detach(elem, attrName, parentModels);
 		if (this.fn[elem]) {
 			$cheeta(elem).off('keydown keyup change', this.fn[elem]);
 		}

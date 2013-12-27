@@ -8,13 +8,10 @@ new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 	
 	var baseAttrName = attrName.substring(attrName.indexOf('data-') == 0 ? 7 : 2, attrName.length - 1);
 	var split = baseAttrName.split('-');
-	this.listeners = this.listeners || {};
 	(function bindEvent(event, key, attrName) {
 		var fn = function(e) {
 			eval(elem.getAttribute(attrName));
 		};
-		this.listeners[this.id(elem)]
-		elem.__$cheeta_event_listeners = elem.__$cheeta_event_listeners || [];
 		if (event.indexOf('key') == 0) {
 			var keyFn = function(e) {
 				var code = 1;
@@ -33,20 +30,12 @@ new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 					fn.apply(elem, [e]);
 				}
 			};
-			elem.__$cheeta_event_listeners.push({event: event, fn: keyFn});
 			elem.addEventListener(event, keyFn, false);			
 		} else {
 			var listenerFn = function(e) {
 				fn.apply(elem, [e]);
 			};
-			elem.__$cheeta_event_listeners.push({event: event, fn: listenerFn});
 			elem.addEventListener(event, listenerFn, false);
 		}
 	})(split[0], split[1], attrName);
-}).onDetach(function(elem, attrName, parentModels) {
-	var listeners = elem.__$cheeta_event_listeners;
-	for (var i = 0; i < listeners.length; i++) {
-		var listener = listeners[i];
-		elem.removeEventListener(listener.event, listener.fn, false)
-	}
 });
