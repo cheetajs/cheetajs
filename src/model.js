@@ -251,10 +251,14 @@ $cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
 $cheeta.model.root.value = window;
 $cheeta.root = $cheeta.model.root;
 
+$cheeta.future = function(future) {
+	$cheeta.future.evals.push(future);
+};
+$cheeta.future.evals = $cheeta.future.evals || [];
+
 window.addEventListener('load', function() {
 	if (!$cheeta.isInitialized) {
 		$cheeta.isInitialized = true;
-		$cheeta.future = {evals: [{}]};
 		$cheeta.hash.init();
 		$cheeta.compiler.compile([$cheeta.model.root], document.documentElement);
 	}

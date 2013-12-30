@@ -251,10 +251,14 @@ $cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
 $cheeta.model.root.value = window;
 $cheeta.root = $cheeta.model.root;
 
+$cheeta.future = function(future) {
+	$cheeta.future.evals.push(future);
+};
+$cheeta.future.evals = $cheeta.future.evals || [];
+
 window.addEventListener('load', function() {
 	if (!$cheeta.isInitialized) {
 		$cheeta.isInitialized = true;
-		$cheeta.future = {evals: [{}]};
 		$cheeta.hash.init();
 		$cheeta.compiler.compile([$cheeta.model.root], document.documentElement);
 	}
@@ -628,11 +632,13 @@ $cheeta.XHR.prototype = new XMLHttpRequest();
 
 (function() {
 	var attach = function(elem, attrName, parentModels) {
+		//TODO handle app1['myapp,yourapp']
 		var defs = elem.getAttribute(attrName).split(/ *, */g);
 		var models = [];
 		
 		for (var i = 0; i < defs.length; i++) {
 			var def = defs[i];
+			//TODO handle app1['123 as 123']
 			split = def.split(/ +as +/g);
 			var name = split[0];
 			var as = split.length > 1 ? split[1] : null;
@@ -699,9 +705,11 @@ new $cheeta.Directive('for.').setOrder(100).onAttach(function(elem, attrName, pa
 	model.unbindModelChange(elem, attrName);
 	return [model];
 }).parseAttr = function(val) {
+	//TODO handle app1['a in b']
 	var split = val.split(/ +in +/g);
 	var name = split[1];
 	var arrayVar = split[0];
+	//TODO handle app1['a as b']
 	split = name.split(/ +as +/g);
 	name = split[0];
 	var as = split.length > 1 ? split[1] : null;
@@ -759,6 +767,14 @@ new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 			elem.addEventListener(event, listenerFn, false);
 		}
 	})(split[0], split[1], attrName);
+});
+
+new $cheeta.Directive('show.').onModelValueChange(function(val, elem) {
+	if (val) {
+		elem.style.display = '';
+	} else {
+		elem.style.display = 'none';
+	}
 });
 
 new $cheeta.Directive('text.').onModelValueChange(function(val, elem) {

@@ -45,9 +45,11 @@ new $cheeta.Directive('for.').setOrder(100).onAttach(function(elem, attrName, pa
 	model.unbindModelChange(elem, attrName);
 	return [model];
 }).parseAttr = function(val) {
+	//TODO handle app1['a in b']
 	var split = val.split(/ +in +/g);
 	var name = split[1];
 	var arrayVar = split[0];
+	//TODO handle app1['a as b']
 	split = name.split(/ +as +/g);
 	name = split[0];
 	var as = split.length > 1 ? split[1] : null;
