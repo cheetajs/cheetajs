@@ -33,7 +33,7 @@ $cheeta.model = $cheeta.model || {
 			var expr = '';
 			var model = this;
 			while (model.parent != null && model.names[0] != null) {
-				expr = (model.hasSpecialChar ? '[' + model.names[0] + ']' : '.' + model.names[0]) + expr;
+				expr = (model.hasSpecialChar ? '[\'' + model.names[0] + '\']' : '.' + model.names[0]) + expr;
 				model = model.parent;
 			}
 			
@@ -246,6 +246,11 @@ $cheeta.model = $cheeta.model || {
 		return parentModel;
 	}
 };
+
+$cheeta.refresh = function(modelRef) {
+	var model = $cheeta.model.createOrGetModel(parentModels, modelRef);
+	model.valueChange(eval(model.toExpr()), null);
+}
 
 $cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
 $cheeta.model.root.value = window;

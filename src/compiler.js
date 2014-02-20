@@ -21,10 +21,10 @@ $cheeta.compiler = {
 					models = this.compileDirectives(parentModels, node, erase);
 				}
 			}
-			if (!node.__isFor_) {
+			if (!node.__shouldSkipChildren_) {
 				this.recursiveCompile(models, node.firstChild, runInlineScripts, erase);
 			} else {
-				node.__isFor_ = undefined;
+				node.__shouldSkipChildren_ = undefined;
 			}
 			if (!skipSiblings) {
 				this.recursiveCompile(parentModels, node.nextSibling, runInlineScripts, erase);
@@ -59,7 +59,8 @@ $cheeta.compiler = {
 			}
 			parentModels = (models || []).concat(parentModels);
 			
-			if (attrDirective.directive.name == 'for.') {
+			if (attrDirective.directive.name == 'for.' || attrDirective.directive.name == 'show.') {
+				elem.__shouldSkipChildren_ = true;
 				break;
 			}
 		}
@@ -92,7 +93,7 @@ $cheeta.compiler = {
 					for (var i = 0; i < split.length; i++) {
 						additionalAttribs.push({name: split[i] + '.', value: attr.value});
 					}
-//					elem.removeAttribute(attr.name)
+					elem.removeAttribute(attr.name)
 				} else {
 					addDirectiveToList(attr);
 				}

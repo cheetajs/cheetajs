@@ -1,6 +1,6 @@
 <a href="#2">next</a>
 
-<input type='text' data-bind.=".alert"><span data-html.=".alert"></span>
+<input type='text' data-bind.=".notification"><span data-html.=".notification"></span>
 <input type='text'>
 <div data-ctrl.='.about'>
 	<div data-html.='.firstName' d$='asdasd'></div>
@@ -9,6 +9,8 @@
 	Cars:
 	<ul>
 		<li data-for.="car in .cars" >
+			<span data-text.="$i"></span>
+			<span data-text.="'----'"></span>
 			<span data-text.="car"></span>
 			<input type='text' data-bind.="car">
 			<button data-onclick.onkeyup-space.="cars.splice($i, 1)">delete</button>
@@ -18,7 +20,19 @@
 	<button tabindex="0" data-onclick.onkeyup-space.=".cars.push(.newCar)">+</button>
 	<button data-onclick.onkeyup-space.=".cars.pop()">remove last</button>
 	<button data-onclick.onkeyup-space.=".cars.shift()">remove first</button>
-	<button data-onclick.onkeyup-space.=".cars.unshift(.newCar)">add to the beginning</button>
+	<button data-onclick.onkeyup-space.="if (.cars.length > 10) {.cars.unshift(.newCar);}">add to the beginning</button>
+	<button data-onclick.onkeyup-space.="if (100 > 10) {alert(.cars.length)}">size</button>
+	<br/>
+	Cloths:
+	<ul>
+		<li data-for.="key,val in .cloths" >
+			<span data-text.="$i"></span>
+			<span data-text.="key"></span>
+			<span data-text.="val"></span>
+			<input type='text' data-bind.="val">
+			<button data-onclick.onkeyup-space.="delete cloths[key]">delete</button>
+		</li>
+	</ul>
 	<div>
 		Organization: <div data-text.=".work.org"></div>
 		Position: 
@@ -43,6 +57,7 @@
 			firstName: 'Danial1',
 			lastName: 'Farid1',
 			cars: ['Ferrari', 'Porche'],
+			cloths: {'jacket': 3, 'hat': 4, 'pants': 10},
 			work: {
 				org: 'free-lance',
 				position: {

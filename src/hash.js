@@ -41,11 +41,12 @@ $cheeta.hash = {
 		}
 		var oldVal = this.keyval[key]; 
 		this.keyval[key] = val;
+		var _this = this;
 		var toHash = function() {
-			var hash = this.keyval[''] || '';
-			for (var key in this.keyval) {
+			var hash = _this.keyval[''] || '';
+			for (var key in _this.keyval) {
 				if (key.length > 0) {
-					hash += (hash.length > 0 ? '&' : '') + key + "=" + this.keyval[key];
+					hash += (hash.length > 0 ? '&' : '') + key + "=" + _this.keyval[key];
 				}
 			}
 			return hash;
@@ -55,7 +56,7 @@ $cheeta.hash = {
 	},
 	init: function() {
 		var _this = this;
-		window.addEventListener('hashchange', function () {
+		var updateHash = function() {
 			var hash = window.location.hash, index = 0, key = '', val, allKeys = {};
 			try {
 				hash = hash.substring(hash.length > 1 && hash.charAt(2) == '&' ? 2 : 1);
@@ -86,15 +87,17 @@ $cheeta.hash = {
 			} finally {
 				_this.value = hash;
 			}
+		}
+		updateHash();
+		window.addEventListener('hashchange', function () {
+			updateHash();
 		}, false);
 	},
-	get value() {
-		return window.location.hash.length > 0 ? window.location.hash.substring(1) : window.location.hash;
+	get: function(key) {
+		return this.keyval[key || ''];
 	},
-	set value(h) {		
-		return window.location.hash = '#' + h;
-	}
 };
+
 $cheeta.route = $cheeta.route || function(map, hashVal) {
 	if (map == null) {
 		return null;

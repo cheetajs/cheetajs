@@ -22,15 +22,16 @@ $cheeta.Directive = function(name, model) {
 		this.attach = function(elem, attrName, parentModels) {
 			var models = []
 			if (origAttach) origAttach.apply(this);			
-			this.resolveModelNames(elem, attrName, parentModels, function(model) {
+			if (!this.resolveModelNames(elem, attrName, parentModels, function(model) {
 				models.push(model);
 				var _this = this; 
 				model.bindModelChange(elem, attrName, function(e) {
 					var val = eval(elem.getAttribute(attrName));
-					console.log('val: ' + val, attrName, this.names);
 					changeFn.apply(_this, [val, elem, attrName, parentModels]);
 				});
-			});
+			})) {
+				changeFn.apply(this, [eval(elem.getAttribute(attrName)), elem, attrName, parentModels]);
+			}
 			return models;
 		}
 		this.detach = function(elem, attrName, parentModels) {
@@ -56,29 +57,52 @@ $cheeta.Directive = function(name, model) {
 //		return elem.__$cheeta__id_ || (elem.__$cheeta__id_ = this.this.nextId());
 //	}; 
 	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute) {
-		var directive = this;
+		var directive = this, hasModel = false;
 		resolvedVal = this.parseModelVars(elem.getAttribute(attrName), function(modelRef) {
 			var model = $cheeta.model.createOrGetModel(parentModels, modelRef);
 			if (model instanceof Array) {
-				return model[0].toExpr() + '.' + model[1];
+				var mexpr = model[0].toExpr();
+				return mexpr + (mexpr.length > 0 ? '.' : '') + model[1];
 			} else {
 				onModel && onModel.call(directive, model);
 				return model.toExpr();
 			}
+			hasModel = true;
 		});
 		skipSetAttribute || elem.setAttribute(attrName, resolvedVal);
-		return resolvedVal;
+		return hasModel;
 	},
-	this.modelVarRegExp = /(((((\. *)?[^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+)|\[ *([^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+|'(\\'|[^'])*') *\]) *)+\(?)|('(\\'|[^'])*')/g,
 	this.parseModelVars = function(val, modelCallback) {
-		return val.replace(this.modelVarRegExp, function(match) {
-			if (match.charAt(0) == '\'' || match.charAt(0) == '"' || match === 'true' || match === 'false' || 
-					match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match)) {
-				return match;
-			} else {
-				return modelCallback.call(this, match);
-			}
-		});
+		function replaceModelVars(val) {
+			this.modelVarRegExp = /(((((\. *)?[^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+)|\[ *([^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+|'(\\'|[^'])*') *\]) *)+\(?)|('(\\'|[^'])*')/g,
+			this.reservedWords = '(abstract|else|instanceof|super|boolean|enum|int|switch|break|export|interface|synchronized|byte|extends|let|this|case|false|long|' +
+				'throw|catch|final|native|throws|char|finally|new|transient|class|float|null|true|const|for|package|try|continue|function|private|typeof|debugger|' +
+				'goto|protected|var|default|if|public|void|delete|implements|return|volatile|do|import|short|while|double|in|static|with)';
+			return val.replace(this.modelVarRegExp, function(match) {
+				if (match.charAt(0) === '\'' || match.charAt(0) === '"' || match === 'true' || match === 'false' || 
+						match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match)) {
+					return match;
+				} else {
+					match = match.replace(/\[ *([^0-9'"].*?)\]/g, function(m, $1) {
+						return '[' + replaceModelVars($1) + ']';
+					});
+					var reserved = '';
+					match = match.replace(new RegExp('(^|\\W)' + this.reservedWords + '(\\W|$)', 'g'), function(m, $1, $2, $3) {
+						reserved += $2 + '|';
+						return $1 + '\'' + $2 + '\'' + $3; 
+					});
+					if (reserved.length > 0) {
+						match = replaceModelVars(match);
+						return match.replace(new RegExp('\'\(' + reserved.slice(0, -1) + '\)\'', 'g'), function(m) {
+							return m.slice(1, -1);
+						});
+					} else {
+						return modelCallback.call(this, match)
+					}
+				}
+			});
+		}
+		return replaceModelVars(val);
 	};
 //	this.tokenizeAttrVal = function(val, onToken) {
 //		var quote = null, regexpMod = false, index = -1, optionsSplitIndex = val.indexOf(';');
