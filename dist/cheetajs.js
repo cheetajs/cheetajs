@@ -183,7 +183,7 @@ $cheeta.model = $cheeta.model || {
 						return (prevProp && prevProp.get && prevProp.get.apply(value)) || model.value;
 					},
 					enumerable: true,
-					configurable: true,
+					configurable: true
 				});
 			} catch(e) { 
 				if (!(e instanceof TypeError)) throw e;
@@ -250,7 +250,7 @@ $cheeta.model = $cheeta.model || {
 $cheeta.refresh = function(modelRef) {
 	var model = $cheeta.model.createOrGetModel(parentModels, modelRef);
 	model.valueChange(eval(model.toExpr()), null);
-}
+};
 
 $cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
 $cheeta.model.root.value = window;
@@ -484,10 +484,10 @@ $cheeta.compiler = {
 					models = this.compileDirectives(parentModels, node, erase);
 				}
 			}
-			if (!node.__isFor_) {
+			if (!node.__shouldSkipChildren_) {
 				this.recursiveCompile(models, node.firstChild, runInlineScripts, erase);
 			} else {
-				node.__isFor_ = undefined;
+				node.__shouldSkipChildren_ = undefined;
 			}
 			if (!skipSiblings) {
 				this.recursiveCompile(parentModels, node.nextSibling, runInlineScripts, erase);
@@ -522,8 +522,8 @@ $cheeta.compiler = {
 			}
 			parentModels = (models || []).concat(parentModels);
 			
-			if (attrDirective.directive.name == 'for.') {
-				elem.__isFor_ = true;
+			if (attrDirective.directive.name == 'for.' || attrDirective.directive.name == 'show.') {
+				elem.__shouldSkipChildren_ = true;
 				break;
 			}
 		}
@@ -598,6 +598,7 @@ $cheeta.XHR = function(target) {
 		return xhr;
 	};
 	var successCallbacks = [], completeCallbacks = [], errorCallbacks = [], stateChangeCallbacks = [];
+	this.successCallbacks = []; this.completeCallbacks = []; this.errorCallbacks = []; this.stateChangeCallbacks = [];
 	xhr.onError = function(callback) {
 		errorCallbacks.push(callback);
 		return xhr;
@@ -612,33 +613,67 @@ $cheeta.XHR = function(target) {
 	};
 	xhr.onStateChange = function(callback) {
 		stateChangeCallbacks.push(callback);
+		return xhr;
 	};
+	
+	var _this = this;
+	this.onError = function(callback) {
+		_this.errorCallbacks.push(callback);
+		return _this;
+	};
+	this.onSuccess = function(callback) {
+		_this.successCallbacks.push(callback);
+		return _this;
+	};
+	this.onComplete = function(callback) {
+		_this.completeCallbacks.push(callback);
+		return _this;
+	};
+	this.onStateChange = function(callback) {
+		_this.stateChangeCallbacks.push(callback);
+		return this;
+	};
+	
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == 4) {
 			if (200 <= xhr.status && xhr.status < 300) {
 				for (var i = 0; i < successCallbacks.length; i++) {
 					successCallbacks[i].apply(target, [xhr]);
 				}
+				for (var i = 0; i < _this.successCallbacks.length; i++) {
+					_this.successCallbacks[i].apply(target, [xhr]);
+				}
 			} else {
 				for (var i = 0; i < errorCallbacks.length; i++) {
 					errorCallbacks[i].apply(target, [xhr]);
+				}
+				for (var i = 0; i < _this.errorCallbacks.length; i++) {
+					_this.errorCallbacks[i].apply(target, [xhr]);
 				}
 			}
 			for (var i = 0; i < completeCallbacks.length; i++) {
 				completeCallbacks[i].apply(target, [xhr]);
 			}
+			for (var i = 0; i < _this.completeCallbacks.length; i++) {
+				_this.completeCallbacks[i].apply(target, [xhr]);
+			}
+			
         }
 		for (var i = 0; i < stateChangeCallbacks.length; i++) {
 			stateChangeCallbacks[i].apply(target, [xhr]);
 		}		
+		for (var i = 0; i < _this.stateChangeCallbacks.length; i++) {
+			_this.stateChangeCallbacks[i].apply(target, [xhr]);
+		}
 	};
 	Object.defineProperty(xhr, 'data', {
 		get: function() {
-			return xhr.getResponseHeader('Content-Type') == 'application/json' ? JSON.stringify(xhr.responseText) : xhr.responseText;
+			return xhr.getResponseHeader('Content-Type') === 'application/json' ? JSON.parse(xhr.responseText) : xhr.responseText;
 		}, 
 		enumerable: true,
 		configurable: true
 	});
+	
 	return xhr;
 };
 $cheeta.XHR.prototype = new XMLHttpRequest();
@@ -841,9 +876,13 @@ new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 	})(split[0], split[1], attrName);
 });
 
-new $cheeta.Directive('show.').onModelValueChange(function(val, elem) {
+new $cheeta.Directive('show.').onModelValueChange(function(val, elem, attrName, parentModels) {
 	if (val) {
 		elem.style.display = '';
+		if (!elem.__isCompiled_) {
+			elem.__isCompiled_ = true;
+			$cheeta.compiler.compileChildren(parentModels, elem);
+		}
 	} else {
 		elem.style.display = 'none';
 	}
@@ -997,7 +1036,7 @@ $cheeta.hash = {
 	},
 	get: function(key) {
 		return this.keyval[key || ''];
-	},
+	}
 };
 
 $cheeta.route = $cheeta.route || function(map, hashVal) {

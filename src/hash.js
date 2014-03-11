@@ -95,7 +95,7 @@ $cheeta.hash = {
 	},
 	get: function(key) {
 		return this.keyval[key || ''];
-	},
+	}
 };
 
 $cheeta.route = $cheeta.route || function(map, hashVal) {

@@ -183,7 +183,7 @@ $cheeta.model = $cheeta.model || {
 						return (prevProp && prevProp.get && prevProp.get.apply(value)) || model.value;
 					},
 					enumerable: true,
-					configurable: true,
+					configurable: true
 				});
 			} catch(e) { 
 				if (!(e instanceof TypeError)) throw e;
@@ -250,7 +250,7 @@ $cheeta.model = $cheeta.model || {
 $cheeta.refresh = function(modelRef) {
 	var model = $cheeta.model.createOrGetModel(parentModels, modelRef);
 	model.valueChange(eval(model.toExpr()), null);
-}
+};
 
 $cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
 $cheeta.model.root.value = window;
