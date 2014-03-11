@@ -40,6 +40,9 @@ $cheeta.model = $cheeta.model || {
 			return expr.substring(1);
 		};
 		this.createOrGetChild = function(name, hasSpecialChar) {
+			if (this.value == null) {
+				this.value = this.isArray ? [] : {};
+			}
 			var model = this.children[name];
 			if (model === undefined) {
 				model = new $cheeta.model.Model(this, name);
@@ -48,9 +51,6 @@ $cheeta.model = $cheeta.model || {
 				model.value = this.value == null ? undefined : this.value[name];
 			}
 			model.hasSpecialChar = hasSpecialChar; 
-			if (this.value == null) {
-				this.value = this.isArray ? [] : {};
-			}
 			return model;
 		};
 		this.alias = function(alias) {
@@ -64,8 +64,8 @@ $cheeta.model = $cheeta.model || {
 				console.log('binding: ' + this.toExpr(), elem, attrName, this.bindings.length);
 				elem.addEventListener('$cheetaMC-' + attrName + '-' + this.toExpr(), onChange, false);
 				if (this.value != null) {
-					$cheeta.future.evals.push(onChange, {type: '$cheetaMC-' + attrName + '-' + this.toExpr(), 'detail': 
-						{value: this.value, oldValue: null, target: this}});
+					$cheeta.future.evals.push([onChange, {type: '$cheetaMC-' + attrName + '-' + this.toExpr(), 'detail': 
+						{value: this.value, oldValue: null, target: this}}]);
 				}
 			}
 		};
@@ -257,7 +257,7 @@ $cheeta.model.root.value = window;
 $cheeta.root = $cheeta.model.root;
 
 $cheeta.future = function(future) {
-	$cheeta.future.evals.push(future);
+	$cheeta.future.evals.push([future]);
 };
 $cheeta.future.evals = $cheeta.future.evals || [];
 

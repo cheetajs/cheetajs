@@ -59,7 +59,8 @@ $cheeta.Directive = function(name, model) {
 	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute) {
 		var directive = this, hasModel = false;
 		resolvedVal = this.parseModelVars(elem.getAttribute(attrName), function(modelRef) {
-			var model = $cheeta.model.createOrGetModel(parentModels, modelRef);
+			var model = $cheeta.model.createOrGetModel(parentModels, modelRef.trim());
+			hasModel = true;
 			if (model instanceof Array) {
 				var mexpr = model[0].toExpr();
 				return mexpr + (mexpr.length > 0 ? '.' : '') + model[1];
@@ -67,7 +68,6 @@ $cheeta.Directive = function(name, model) {
 				onModel && onModel.call(directive, model);
 				return model.toExpr();
 			}
-			hasModel = true;
 		});
 		skipSetAttribute || elem.setAttribute(attrName, resolvedVal);
 		return hasModel;
@@ -97,7 +97,7 @@ $cheeta.Directive = function(name, model) {
 							return m.slice(1, -1);
 						});
 					} else {
-						return modelCallback.call(this, match)
+						return modelCallback.call(this, match);
 					}
 				}
 			});

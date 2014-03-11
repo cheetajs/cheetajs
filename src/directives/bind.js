@@ -3,7 +3,11 @@
 		this.fn = this.fn || {};
 		this.fn[elem] = function(e) {
 			setTimeout(function() {
-				eval(elem.getAttribute(attrName) + '=\'' + elem.value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'') + '\'');
+				var _tmp__fn__ = function() {
+					return elem.value;
+				};
+				eval(elem.getAttribute(attrName) + '=_tmp__fn__()');
+//				eval(elem.getAttribute(attrName) + '=\'' + elem.value.replace(/\\/g, '\\\\').replace(/'/g, '\\\'') + '\'');
 			}, 0);
 		}
 		$cheeta.Directive.get('value.').attach(elem, attrName, parentModels);

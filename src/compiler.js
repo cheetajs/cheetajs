@@ -93,7 +93,7 @@ $cheeta.compiler = {
 					for (var i = 0; i < split.length; i++) {
 						additionalAttribs.push({name: split[i] + '.', value: attr.value});
 					}
-					elem.removeAttribute(attr.name)
+					elem.removeAttribute(attr.name);
 				} else {
 					addDirectiveToList(attr);
 				}
@@ -113,8 +113,8 @@ $cheeta.compiler = {
 		$cheeta.future.evals = [];
 		for (var i = 0; i < runs.length; i++) {
 			var expr = runs[i];
-			if (expr instanceof Function) {
-				expr(runs[++i]);
+			if (Array.isArray(expr)) {
+				expr[0].call(expr.slice(1));
 			} else {
 				eval(expr);
 			}
