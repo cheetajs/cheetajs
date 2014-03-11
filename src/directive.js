@@ -20,10 +20,10 @@ $cheeta.Directive = function(name, model) {
 		var origAttach = this.attach;
 		var origDetach = this.detach;
 		this.attach = function(elem, attrName, parentModels) {
-			var models = []
+			//var models = [];
 			if (origAttach) origAttach.apply(this);			
 			if (!this.resolveModelNames(elem, attrName, parentModels, function(model) {
-				models.push(model);
+				//models.push(model);
 				var _this = this; 
 				model.bindModelChange(elem, attrName, function(e) {
 					var val = eval(elem.getAttribute(attrName));
@@ -32,16 +32,16 @@ $cheeta.Directive = function(name, model) {
 			})) {
 				changeFn.apply(this, [eval(elem.getAttribute(attrName)), elem, attrName, parentModels]);
 			}
-			return models;
+			//return models;
 		}
 		this.detach = function(elem, attrName, parentModels) {
-			var models = []; 
+			//var models = []; 
 			if (origDetach) origDetach.apply(this);
 			this.resolveModelNames(elem, attrName, parentModels, function(model) {
-				models.push(model);
+				//models.push(model);
 				model.unbindModelChange(elem, attrName);
 			}, true);
-			return models;
+			//return models;
 		}
 		return this;
 	};

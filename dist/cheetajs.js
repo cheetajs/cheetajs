@@ -290,10 +290,10 @@ $cheeta.Directive = function(name, model) {
 		var origAttach = this.attach;
 		var origDetach = this.detach;
 		this.attach = function(elem, attrName, parentModels) {
-			var models = []
+			//var models = [];
 			if (origAttach) origAttach.apply(this);			
 			if (!this.resolveModelNames(elem, attrName, parentModels, function(model) {
-				models.push(model);
+				//models.push(model);
 				var _this = this; 
 				model.bindModelChange(elem, attrName, function(e) {
 					var val = eval(elem.getAttribute(attrName));
@@ -302,16 +302,16 @@ $cheeta.Directive = function(name, model) {
 			})) {
 				changeFn.apply(this, [eval(elem.getAttribute(attrName)), elem, attrName, parentModels]);
 			}
-			return models;
+			//return models;
 		}
 		this.detach = function(elem, attrName, parentModels) {
-			var models = []; 
+			//var models = []; 
 			if (origDetach) origDetach.apply(this);
 			this.resolveModelNames(elem, attrName, parentModels, function(model) {
-				models.push(model);
+				//models.push(model);
 				model.unbindModelChange(elem, attrName);
 			}, true);
-			return models;
+			//return models;
 		}
 		return this;
 	};
@@ -484,10 +484,10 @@ $cheeta.compiler = {
 					models = this.compileDirectives(parentModels, node, erase);
 				}
 			}
-			if (!node.__isFor_) {
+			if (!node.__shouldSkipChildren_) {
 				this.recursiveCompile(models, node.firstChild, runInlineScripts, erase);
 			} else {
-				node.__isFor_ = undefined;
+				node.__shouldSkipChildren_ = undefined;
 			}
 			if (!skipSiblings) {
 				this.recursiveCompile(parentModels, node.nextSibling, runInlineScripts, erase);
@@ -522,8 +522,8 @@ $cheeta.compiler = {
 			}
 			parentModels = (models || []).concat(parentModels);
 			
-			if (attrDirective.directive.name == 'for.') {
-				elem.__isFor_ = true;
+			if (attrDirective.directive.name == 'for.' || attrDirective.directive.name == 'show.') {
+				elem.__shouldSkipChildren_ = true;
 				break;
 			}
 		}
@@ -675,6 +675,7 @@ $cheeta.XHR.prototype = new XMLHttpRequest();
 			var model = $cheeta.model.createOrGetModel(parentModels, name);
 			model.alias(as);
 			models.push(model);
+//			eval(model.toExpr() + '=' + model.toExpr() + '|{}');
 		}
 		return models;
 	};
@@ -841,9 +842,13 @@ new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 	})(split[0], split[1], attrName);
 });
 
-new $cheeta.Directive('show.').onModelValueChange(function(val, elem) {
+new $cheeta.Directive('show.').onModelValueChange(function(val, elem, attrName, parentModels) {
 	if (val) {
 		elem.style.display = '';
+		if (!elem.__isCompiled_) {
+			elem.__isCompiled_ = true;
+			$cheeta.compiler.compileChildren(parentModels, elem);
+		}
 	} else {
 		elem.style.display = 'none';
 	}
