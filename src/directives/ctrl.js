@@ -13,6 +13,7 @@
 			var model = $cheeta.model.createOrGetModel(parentModels, name);
 			model.alias(as);
 			models.push(model);
+//			eval(model.toExpr() + '=' + model.toExpr() + '|{}');
 		}
 		return models;
 	};
