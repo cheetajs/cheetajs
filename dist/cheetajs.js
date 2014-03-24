@@ -154,42 +154,45 @@ $cheeta.model = $cheeta.model || {
 	interceptProp: function(model, value, name) {
 		if (value != null) {
 			var beforeValue = value[name];
-			var isCheetaIntercepted = model.parent.children && model.parent.children[name] != null; 
+			var isCheetaIntercepted = model.parent.children && model.parent.children[name] != null;
+			// avoid infinit loop to redefine prop
 			var prevProp = isCheetaIntercepted ? null : Object.getOwnPropertyDescriptor(value, name);
-			try {
-				Object.defineProperty(value, name, {
-			        set: function(val) {
-			        	if (prevProp && prevProp.set) {
-			        		prevProp.set.apply(value, arguments);
-			        	}
-			        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
-			        	var prevVal = model.value;
-			        	if (prevVal != val) {
-			        		model.value = val;
-			        		if (model.isArray) {
-			        			$cheeta.model.interceptArray(model);
-			        		}
-				        	model.valueChange(val, prevVal);
-				        	if (val instanceof Object) {
-								for (var key in model.children) {
-									var origVal = val[key];
-									$cheeta.model.interceptProp(model.children[key], val, key);
-									val[key] = origVal;
-								}
+			if (!isCheetaIntercepted) {
+				try {
+					Object.defineProperty(value, name, {
+				        set: function(val) {
+				        	if (prevProp && prevProp.set) {
+				        		prevProp.set.apply(value, arguments);
 				        	}
-			        	}
-					}, 
-					get: function() {
-						return (prevProp && prevProp.get && prevProp.get.apply(value)) || model.value;
-					},
-					enumerable: true,
-					configurable: true
-				});
-			} catch(e) { 
-				if (!(e instanceof TypeError)) throw e;
-				return;
+				        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
+				        	var prevVal = model.value;
+				        	if (prevVal != val) {
+				        		model.value = val;
+				        		if (model.isArray) {
+				        			$cheeta.model.interceptArray(model);
+				        		}
+					        	model.valueChange(val, prevVal);
+					        	if (val instanceof Object) {
+									for (var key in model.children) {
+										var origVal = val[key];
+										$cheeta.model.interceptProp(model.children[key], val, key);
+										val[key] = origVal;
+									}
+					        	}
+				        	}
+						}, 
+						get: function() {
+							return (prevProp && prevProp.get && prevProp.get.apply(value)) || model.value;
+						},
+						enumerable: true,
+						configurable: true
+					});
+				} catch(e) { 
+					if (!(e instanceof TypeError)) throw e;
+					return;
+				}
+				value[name] = beforeValue;
 			}
-			value[name] = beforeValue;
 		}
 	},
 	findParentModel: function(model, rootName) {
@@ -255,6 +258,15 @@ $cheeta.refresh = function(modelRef) {
 $cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
 $cheeta.model.root.value = window;
 $cheeta.root = $cheeta.model.root;
+
+$cheeta.watchFns = [];
+$cheeta.watch = function(modelExpr, fn) {
+	$cheeta.watchFns.push(fn);
+	var elem = document.createElement('div');
+	elem.setAttribute('style', 'display:none');
+	elem.setAttribute('watch.', '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + '](' + modelExpr + ')');
+	document.body.appendChild(elem);
+};
 
 $cheeta.future = function(future) {
 	$cheeta.future.evals.push([future]);
@@ -958,6 +970,8 @@ new $cheeta.Directive('value.').onModelValueChange(function(val, elem) {
 	};
 	viewDirective.cache = {};
 })();
+new $cheeta.Directive('watch*').onModelValueChange();
+
 $cheeta.hash = {
 	keyval: {},
 	watchers: {},

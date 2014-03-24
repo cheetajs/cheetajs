@@ -154,7 +154,8 @@ $cheeta.model = $cheeta.model || {
 	interceptProp: function(model, value, name) {
 		if (value != null) {
 			var beforeValue = value[name];
-			var isCheetaIntercepted = model.parent.children && model.parent.children[name] != null; 
+			var isCheetaIntercepted = model.parent.children && model.parent.children[name] != null;
+			// avoid infinit loop to redefine prop
 			var prevProp = isCheetaIntercepted ? null : Object.getOwnPropertyDescriptor(value, name);
 			try {
 				Object.defineProperty(value, name, {
@@ -255,6 +256,15 @@ $cheeta.refresh = function(modelRef) {
 $cheeta.model.root = $cheeta.model.root || new $cheeta.model.Model(null);
 $cheeta.model.root.value = window;
 $cheeta.root = $cheeta.model.root;
+
+$cheeta.watchFns = [];
+$cheeta.watch = function(modelExpr, fn) {
+	$cheeta.watchFns.push(fn);
+	var elem = document.createElement('div');
+	elem.setAttribute('style', 'display:none');
+	elem.setAttribute('watch.', '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + '](' + modelExpr + ')');
+	document.body.appendChild(elem);
+};
 
 $cheeta.future = function(future) {
 	$cheeta.future.evals.push([future]);
