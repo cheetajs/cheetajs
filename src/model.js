@@ -165,6 +165,9 @@ $cheeta.model = $cheeta.model || {
 			        	}
 			        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
 			        	var prevVal = model.value;
+			        	for (var key in model.children) {
+			        		
+			        	}
 			        	if (prevVal != val) {
 			        		model.value = val;
 			        		if (model.isArray) {
@@ -174,6 +177,12 @@ $cheeta.model = $cheeta.model || {
 				        	if (val instanceof Object) {
 								for (var key in model.children) {
 									var origVal = val[key];
+									// cleanup the previous value's child interceptors.
+									if (prevVal != null) {
+										var pval = prevVal[key];
+										delete prevVal[key];
+										prevVal[key] = pval;
+									}
 									$cheeta.model.interceptProp(model.children[key], val, key);
 									val[key] = origVal;
 								}
@@ -262,7 +271,7 @@ $cheeta.watch = function(modelExpr, fn) {
 	$cheeta.watchFns.push(fn);
 	var elem = document.createElement('div');
 	elem.setAttribute('style', 'display:none');
-	elem.setAttribute('watch.', '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + '](' + modelExpr + ')');
+	elem.setAttribute('watch.', modelExpr + ';$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
 	document.body.appendChild(elem);
 };
 

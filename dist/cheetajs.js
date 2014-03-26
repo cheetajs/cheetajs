@@ -157,42 +157,49 @@ $cheeta.model = $cheeta.model || {
 			var isCheetaIntercepted = model.parent.children && model.parent.children[name] != null;
 			// avoid infinit loop to redefine prop
 			var prevProp = isCheetaIntercepted ? null : Object.getOwnPropertyDescriptor(value, name);
-			if (!isCheetaIntercepted) {
-				try {
-					Object.defineProperty(value, name, {
-				        set: function(val) {
-				        	if (prevProp && prevProp.set) {
-				        		prevProp.set.apply(value, arguments);
-				        	}
-				        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
-				        	var prevVal = model.value;
-				        	if (prevVal != val) {
-				        		model.value = val;
-				        		if (model.isArray) {
-				        			$cheeta.model.interceptArray(model);
-				        		}
-					        	model.valueChange(val, prevVal);
-					        	if (val instanceof Object) {
-									for (var key in model.children) {
-										var origVal = val[key];
-										$cheeta.model.interceptProp(model.children[key], val, key);
-										val[key] = origVal;
+			try {
+				Object.defineProperty(value, name, {
+			        set: function(val) {
+			        	if (prevProp && prevProp.set) {
+			        		prevProp.set.apply(value, arguments);
+			        	}
+			        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
+			        	var prevVal = model.value;
+			        	for (var key in model.children) {
+			        		
+			        	}
+			        	if (prevVal != val) {
+			        		model.value = val;
+			        		if (model.isArray) {
+			        			$cheeta.model.interceptArray(model);
+			        		}
+				        	model.valueChange(val, prevVal);
+				        	if (val instanceof Object) {
+								for (var key in model.children) {
+									var origVal = val[key];
+									// cleanup the previous value's child interceptors.
+									if (prevVal != null) {
+										var pval = prevVal[key];
+										delete prevVal[key];
+										prevVal[key] = pval;
 									}
-					        	}
+									$cheeta.model.interceptProp(model.children[key], val, key);
+									val[key] = origVal;
+								}
 				        	}
-						}, 
-						get: function() {
-							return (prevProp && prevProp.get && prevProp.get.apply(value)) || model.value;
-						},
-						enumerable: true,
-						configurable: true
-					});
-				} catch(e) { 
-					if (!(e instanceof TypeError)) throw e;
-					return;
-				}
-				value[name] = beforeValue;
+			        	}
+					}, 
+					get: function() {
+						return (prevProp && prevProp.get && prevProp.get.apply(value)) || model.value;
+					},
+					enumerable: true,
+					configurable: true
+				});
+			} catch(e) { 
+				if (!(e instanceof TypeError)) throw e;
+				return;
 			}
+			value[name] = beforeValue;
 		}
 	},
 	findParentModel: function(model, rootName) {
@@ -264,7 +271,7 @@ $cheeta.watch = function(modelExpr, fn) {
 	$cheeta.watchFns.push(fn);
 	var elem = document.createElement('div');
 	elem.setAttribute('style', 'display:none');
-	elem.setAttribute('watch.', '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + '](' + modelExpr + ')');
+	elem.setAttribute('watch.', modelExpr + ';$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
 	document.body.appendChild(elem);
 };
 
@@ -298,7 +305,7 @@ $cheeta.Directive = function(name, model) {
 		this.detach = detachFn;
 		return this;
 	};
-	this.onModelValueChange = function(changeFn) {
+	this.onModelValueChange = function(changeFn, attrValueTransformer) {
 		var origAttach = this.attach;
 		var origDetach = this.detach;
 		this.attach = function(elem, attrName, parentModels) {
@@ -309,10 +316,11 @@ $cheeta.Directive = function(name, model) {
 				var _this = this; 
 				model.bindModelChange(elem, attrName, function(e) {
 					var val = eval(elem.getAttribute(attrName));
-					changeFn.apply(_this, [val, elem, attrName, parentModels]);
+					changeFn && changeFn.apply(_this, [val, elem, attrName, parentModels]);
 				});
-			})) {
-				changeFn.apply(this, [eval(elem.getAttribute(attrName)), elem, attrName, parentModels]);
+			}, false, attrValueTransformer)) {
+				var val = eval(elem.getAttribute(attrName));
+				changeFn && changeFn.apply(this, [val, elem, attrName, parentModels]);
 			}
 			//return models;
 		}
@@ -338,9 +346,10 @@ $cheeta.Directive = function(name, model) {
 //	this.id = function(elem) {
 //		return elem.__$cheeta__id_ || (elem.__$cheeta__id_ = this.this.nextId());
 //	}; 
-	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute) {
+	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute, attrValueTransformer) {
 		var directive = this, hasModel = false;
-		resolvedVal = this.parseModelVars(elem.getAttribute(attrName), function(modelRef) {
+		resolvedVal = this.parseModelVars((attrValueTransformer && attrValueTransformer(elem, attrName)) 
+				|| elem.getAttribute(attrName), function(modelRef) {
 			var model = $cheeta.model.createOrGetModel(parentModels, modelRef.trim());
 			hasModel = true;
 			if (model instanceof Array) {
@@ -970,7 +979,14 @@ new $cheeta.Directive('value.').onModelValueChange(function(val, elem) {
 	};
 	viewDirective.cache = {};
 })();
-new $cheeta.Directive('watch*').onModelValueChange();
+new $cheeta.Directive('watch*').onModelValueChange(null, function(elem, attrName) {
+	var val = elem.getAttribute(attrName);
+	while (val.indexOf(';', val.length - 1) > -1 || val.indexOf(' ', val.length - 1) > -1) {
+		val = val.substring(0, val.length - 1);
+	}
+	//TODO handle a['de;de'];fn()
+	return val.substring(0, val.lastIndexOf(';'));
+});
 
 $cheeta.hash = {
 	keyval: {},

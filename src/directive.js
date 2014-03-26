@@ -16,7 +16,7 @@ $cheeta.Directive = function(name, model) {
 		this.detach = detachFn;
 		return this;
 	};
-	this.onModelValueChange = function(changeFn) {
+	this.onModelValueChange = function(changeFn, attrValueTransformer) {
 		var origAttach = this.attach;
 		var origDetach = this.detach;
 		this.attach = function(elem, attrName, parentModels) {
@@ -27,10 +27,11 @@ $cheeta.Directive = function(name, model) {
 				var _this = this; 
 				model.bindModelChange(elem, attrName, function(e) {
 					var val = eval(elem.getAttribute(attrName));
-					changeFn.apply(_this, [val, elem, attrName, parentModels]);
+					changeFn && changeFn.apply(_this, [val, elem, attrName, parentModels]);
 				});
-			})) {
-				changeFn.apply(this, [eval(elem.getAttribute(attrName)), elem, attrName, parentModels]);
+			}, false, attrValueTransformer)) {
+				var val = eval(elem.getAttribute(attrName));
+				changeFn && changeFn.apply(this, [val, elem, attrName, parentModels]);
 			}
 			//return models;
 		}
@@ -56,9 +57,10 @@ $cheeta.Directive = function(name, model) {
 //	this.id = function(elem) {
 //		return elem.__$cheeta__id_ || (elem.__$cheeta__id_ = this.this.nextId());
 //	}; 
-	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute) {
+	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute, attrValueTransformer) {
 		var directive = this, hasModel = false;
-		resolvedVal = this.parseModelVars(elem.getAttribute(attrName), function(modelRef) {
+		resolvedVal = this.parseModelVars((attrValueTransformer && attrValueTransformer(elem, attrName)) 
+				|| elem.getAttribute(attrName), function(modelRef) {
 			var model = $cheeta.model.createOrGetModel(parentModels, modelRef.trim());
 			hasModel = true;
 			if (model instanceof Array) {
