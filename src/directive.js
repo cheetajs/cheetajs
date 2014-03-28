@@ -29,7 +29,7 @@ $cheeta.Directive = function(name, model) {
 					var val = eval(elem.getAttribute(attrName));
 					changeFn && changeFn.apply(_this, [val, elem, attrName, parentModels]);
 				});
-			}, false, attrValueTransformer)) {
+			}, attrValueTransformer)) {
 				var val = eval(elem.getAttribute(attrName));
 				changeFn && changeFn.apply(this, [val, elem, attrName, parentModels]);
 			}
@@ -57,7 +57,7 @@ $cheeta.Directive = function(name, model) {
 //	this.id = function(elem) {
 //		return elem.__$cheeta__id_ || (elem.__$cheeta__id_ = this.this.nextId());
 //	}; 
-	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute, attrValueTransformer) {
+	this.resolveModelNames = function(elem, attrName, parentModels, onModel, attrValueTransformer) {
 		var directive = this, hasModel = false;
 		resolvedVal = this.parseModelVars((attrValueTransformer && attrValueTransformer(elem, attrName)) 
 				|| elem.getAttribute(attrName), function(modelRef) {
@@ -71,7 +71,7 @@ $cheeta.Directive = function(name, model) {
 				return model.toExpr();
 			}
 		});
-		skipSetAttribute || elem.setAttribute(attrName, resolvedVal);
+		attrValueTransformer || elem.setAttribute(attrName, resolvedVal);
 		return hasModel;
 	},
 	this.parseModelVars = function(val, modelCallback) {

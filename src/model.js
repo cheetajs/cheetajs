@@ -271,7 +271,8 @@ $cheeta.watch = function(modelExpr, fn) {
 	$cheeta.watchFns.push(fn);
 	var elem = document.createElement('div');
 	elem.setAttribute('style', 'display:none');
-	elem.setAttribute('watch.', modelExpr + ';$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
+	elem.setAttribute('watch.', modelExpr);
+	elem.setAttribute('onwatch.', '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
 	document.body.appendChild(elem);
 };
 

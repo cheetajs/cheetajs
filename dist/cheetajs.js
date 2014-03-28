@@ -318,7 +318,7 @@ $cheeta.Directive = function(name, model) {
 					var val = eval(elem.getAttribute(attrName));
 					changeFn && changeFn.apply(_this, [val, elem, attrName, parentModels]);
 				});
-			}, false, attrValueTransformer)) {
+			}, attrValueTransformer)) {
 				var val = eval(elem.getAttribute(attrName));
 				changeFn && changeFn.apply(this, [val, elem, attrName, parentModels]);
 			}
@@ -346,7 +346,7 @@ $cheeta.Directive = function(name, model) {
 //	this.id = function(elem) {
 //		return elem.__$cheeta__id_ || (elem.__$cheeta__id_ = this.this.nextId());
 //	}; 
-	this.resolveModelNames = function(elem, attrName, parentModels, onModel, skipSetAttribute, attrValueTransformer) {
+	this.resolveModelNames = function(elem, attrName, parentModels, onModel, attrValueTransformer) {
 		var directive = this, hasModel = false;
 		resolvedVal = this.parseModelVars((attrValueTransformer && attrValueTransformer(elem, attrName)) 
 				|| elem.getAttribute(attrName), function(modelRef) {
@@ -360,7 +360,7 @@ $cheeta.Directive = function(name, model) {
 				return model.toExpr();
 			}
 		});
-		skipSetAttribute || elem.setAttribute(attrName, resolvedVal);
+		attrValueTransformer || elem.setAttribute(attrName, resolvedVal);
 		return hasModel;
 	},
 	this.parseModelVars = function(val, modelCallback) {
@@ -619,7 +619,6 @@ $cheeta.XHR = function(target) {
 		return xhr;
 	};
 	var successCallbacks = [], completeCallbacks = [], errorCallbacks = [], stateChangeCallbacks = [];
-	this.successCallbacks = []; this.completeCallbacks = []; this.errorCallbacks = []; this.stateChangeCallbacks = [];
 	xhr.onError = function(callback) {
 		errorCallbacks.push(callback);
 		return xhr;
@@ -636,55 +635,37 @@ $cheeta.XHR = function(target) {
 		stateChangeCallbacks.push(callback);
 		return xhr;
 	};
-	
-	var _this = this;
-	this.onError = function(callback) {
-		_this.errorCallbacks.push(callback);
-		return _this;
-	};
-	this.onSuccess = function(callback) {
-		_this.successCallbacks.push(callback);
-		return _this;
-	};
-	this.onComplete = function(callback) {
-		_this.completeCallbacks.push(callback);
-		return _this;
-	};
-	this.onStateChange = function(callback) {
-		_this.stateChangeCallbacks.push(callback);
-		return this;
-	};
-	
+		
 	xhr.onreadystatechange = function() {
 		if (xhr.readyState == 4) {
 			if (200 <= xhr.status && xhr.status < 300) {
 				for (var i = 0; i < successCallbacks.length; i++) {
 					successCallbacks[i].apply(target, [xhr]);
 				}
-				for (var i = 0; i < _this.successCallbacks.length; i++) {
-					_this.successCallbacks[i].apply(target, [xhr]);
+				for (var i = 0; i < $cheeta.XHR.successCallbacks.length; i++) {
+					$cheeta.XHR.successCallbacks[i].apply(target, [xhr]);
 				}
 			} else {
 				for (var i = 0; i < errorCallbacks.length; i++) {
 					errorCallbacks[i].apply(target, [xhr]);
 				}
-				for (var i = 0; i < _this.errorCallbacks.length; i++) {
-					_this.errorCallbacks[i].apply(target, [xhr]);
+				for (var i = 0; i < $cheeta.XHR.errorCallbacks.length; i++) {
+					$cheeta.XHR.errorCallbacks[i].apply(target, [xhr]);
 				}
 			}
 			for (var i = 0; i < completeCallbacks.length; i++) {
 				completeCallbacks[i].apply(target, [xhr]);
 			}
-			for (var i = 0; i < _this.completeCallbacks.length; i++) {
-				_this.completeCallbacks[i].apply(target, [xhr]);
+			for (var i = 0; i < $cheeta.XHR.completeCallbacks.length; i++) {
+				$cheeta.XHR.completeCallbacks[i].apply(target, [xhr]);
 			}
 			
         }
 		for (var i = 0; i < stateChangeCallbacks.length; i++) {
 			stateChangeCallbacks[i].apply(target, [xhr]);
 		}		
-		for (var i = 0; i < _this.stateChangeCallbacks.length; i++) {
-			_this.stateChangeCallbacks[i].apply(target, [xhr]);
+		for (var i = 0; i < $cheeta.XHR.stateChangeCallbacks.length; i++) {
+			$cheeta.XHR.stateChangeCallbacks[i].apply(target, [xhr]);
 		}
 	};
 	Object.defineProperty(xhr, 'data', {
@@ -697,6 +678,25 @@ $cheeta.XHR = function(target) {
 	
 	return xhr;
 };
+
+$cheeta.XHR.successCallbacks = []; $cheeta.XHR.completeCallbacks = []; $cheeta.XHR.errorCallbacks = []; $cheeta.XHR.stateChangeCallbacks = [];
+$cheeta.XHR.onError = function(callback) {
+	$cheeta.XHR.errorCallbacks.push(callback);
+	return $cheeta.XHR;
+};
+$cheeta.XHR.onSuccess = function(callback) {
+	$cheeta.XHR.successCallbacks.push(callback);
+	return $cheeta.XHR;
+};
+$cheeta.XHR.onComplete = function(callback) {
+	$cheeta.XHR.completeCallbacks.push(callback);
+	return $cheeta.XHR;
+};
+$cheeta.XHR.onStateChange = function(callback) {
+	$cheeta.XHR.stateChangeCallbacks.push(callback);
+	return $cheeta.XHR;
+};
+
 $cheeta.XHR.prototype = new XMLHttpRequest();
 (function() {
 	new $cheeta.Directive('bind.').onAttach(function(elem, attrName, parentModels) {
@@ -979,13 +979,8 @@ new $cheeta.Directive('value.').onModelValueChange(function(val, elem) {
 	};
 	viewDirective.cache = {};
 })();
-new $cheeta.Directive('watch*').onModelValueChange(null, function(elem, attrName) {
-	var val = elem.getAttribute(attrName);
-	while (val.indexOf(';', val.length - 1) > -1 || val.indexOf(' ', val.length - 1) > -1) {
-		val = val.substring(0, val.length - 1);
-	}
-	//TODO handle a['de;de'];fn()
-	return val.substring(0, val.lastIndexOf(';'));
+new $cheeta.Directive('watch*').onModelValueChange(function(v, elem, attrName) {
+	eval(elem.getAttribute('onwatch.') || elem.getAttribute('data-onwatch.'));
 });
 
 $cheeta.hash = {
