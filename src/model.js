@@ -1,6 +1,7 @@
 if (!$cheeta) {
 	var $cheeta = $cheeta || function(obj) {
-		var wrap = [obj];
+		var wrap = new Array();
+		wrap.push(obj);
 		wrap.on = function(events, fn) {
 			var split = events.split(' ');
 			for (var i = 0; i < split.length; i++) {
@@ -155,7 +156,7 @@ $cheeta.model = $cheeta.model || {
 		if (value != null) {
 			var beforeValue = value[name];
 			var isCheetaIntercepted = model.parent.children && model.parent.children[name] != null;
-			// avoid infinit loop to redefine prop
+			// avoid infinite loop to redefine prop
 			var prevProp = isCheetaIntercepted ? null : Object.getOwnPropertyDescriptor(value, name);
 			try {
 				Object.defineProperty(value, name, {
@@ -165,9 +166,6 @@ $cheeta.model = $cheeta.model || {
 			        	}
 			        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
 			        	var prevVal = model.value;
-			        	for (var key in model.children) {
-			        		
-			        	}
 			        	if (prevVal != val) {
 			        		model.value = val;
 			        		if (model.isArray) {

@@ -1,6 +1,7 @@
 if (!$cheeta) {
 	var $cheeta = $cheeta || function(obj) {
-		var wrap = [obj];
+		var wrap = new Array();
+		wrap.push(obj);
 		wrap.on = function(events, fn) {
 			var split = events.split(' ');
 			for (var i = 0; i < split.length; i++) {
@@ -155,7 +156,7 @@ $cheeta.model = $cheeta.model || {
 		if (value != null) {
 			var beforeValue = value[name];
 			var isCheetaIntercepted = model.parent.children && model.parent.children[name] != null;
-			// avoid infinit loop to redefine prop
+			// avoid infinite loop to redefine prop
 			var prevProp = isCheetaIntercepted ? null : Object.getOwnPropertyDescriptor(value, name);
 			try {
 				Object.defineProperty(value, name, {
@@ -165,9 +166,6 @@ $cheeta.model = $cheeta.model || {
 			        	}
 			        	val = (prevProp && prevProp.get && prevProp.get.apply(value)) || val;
 			        	var prevVal = model.value;
-			        	for (var key in model.children) {
-			        		
-			        	}
 			        	if (prevVal != val) {
 			        		model.value = val;
 			        		if (model.isArray) {
@@ -271,7 +269,8 @@ $cheeta.watch = function(modelExpr, fn) {
 	$cheeta.watchFns.push(fn);
 	var elem = document.createElement('div');
 	elem.setAttribute('style', 'display:none');
-	elem.setAttribute('watch.', modelExpr + ';$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
+	elem.setAttribute('watch.', modelExpr);
+	elem.setAttribute('onwatch.', '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
 	document.body.appendChild(elem);
 };
 
@@ -297,12 +296,32 @@ $cheeta.Directive = function(name, model) {
 		this.order = val;
 		return this;
 	};
+	this.onPreAttach = function(preAttachFn) {
+		this.preAttach = this.preAttach ? function() {
+			this.preAttach.apply(this, arguments);
+			preAttachFn.apply(this, arguments);
+		} : preAttachFn;
+		return this;		
+	};
 	this.onAttach = function(attachFn) {
-		this.attach = attachFn;
+		this.attach = this.attach ? function() {
+			this.attach.apply(this, arguments);
+			attachFn.apply(this, arguments);
+		} : attachFn;
 		return this;
 	};
+	this.onPostAttach = function(postAttachFn) {
+		this.postAttach = this.postAttach ? function() {
+			this.postAttach.apply(this, arguments);
+			postAttachFn.apply(this, arguments);
+		} : postAttachFn;
+		return this;		
+	};
 	this.onDetach = function(detachFn) {
-		this.detach = detachFn;
+		this.detach = this.detach ? function() {
+			this.detach.apply(this, arguments);
+			detachFn.apply(this, arguments);
+		} : detachFn;		
 		return this;
 	};
 	this.onModelValueChange = function(changeFn, attrValueTransformer) {
@@ -323,7 +342,7 @@ $cheeta.Directive = function(name, model) {
 				changeFn && changeFn.apply(this, [val, elem, attrName, parentModels]);
 			}
 			//return models;
-		}
+		};
 		this.detach = function(elem, attrName, parentModels) {
 			//var models = []; 
 			if (origDetach) origDetach.apply(this);
@@ -332,7 +351,7 @@ $cheeta.Directive = function(name, model) {
 				model.unbindModelChange(elem, attrName);
 			}, true);
 			//return models;
-		}
+		};
 		return this;
 	};
 //	this.lastId = String.fromCharCode(33); 
@@ -394,6 +413,14 @@ $cheeta.Directive = function(name, model) {
 			});
 		}
 		return replaceModelVars(val);
+	};
+	this.extend = function() {
+		var args = Array.prototype.slice.call(arguments, 0);
+		for (var i = 0; i < args.length; i++) {			
+			this.onAttach(args.attach);
+			this.onDetach(args.detach);
+		}
+		return this;
 	};
 //	this.tokenizeAttrVal = function(val, onToken) {
 //		var quote = null, regexpMod = false, index = -1, optionsSplitIndex = val.indexOf(';');
@@ -457,6 +484,7 @@ $cheeta.Directive = function(name, model) {
 //	};
 	$cheeta.model.get(model).addDirective(this);
 };
+
 $cheeta.Directive.get = function(name, parentModels) {
 	if (name.indexOf('data-') == 0) {
 		name = name.substring(5);
@@ -481,7 +509,7 @@ $cheeta.Directive.get = function(name, parentModels) {
 		}
 	}
 	return $cheeta.Directive.get('');
-}
+};
 $cheeta.compiler = {
 	recursiveCompile: function(parentModels, node, runInlineScripts, erase, skipSiblings, skipNode) {
 		if (node) {
@@ -539,7 +567,8 @@ $cheeta.compiler = {
 			if (erase) {
 				models = attrDirective.directive.detach && attrDirective.directive.detach(elem, attrDirective.attrName, parentModels);
 			} else {
-				models = attrDirective.directive.attach(elem, attrDirective.attrName, parentModels);				
+				models = attrDirective.directive.attach && attrDirective.directive.attach(elem, attrDirective.attrName, parentModels);
+				attrDirective.directive.postAttach && attrDirective.directive.postAttach(elem, attr.name, parentModels);
 			}
 			parentModels = (models || []).concat(parentModels);
 			
@@ -555,6 +584,7 @@ $cheeta.compiler = {
 		var additionalAttribs = [];
 		function addDirectiveToList(attr) {
 			var directive = $cheeta.Directive.get(attr.name, parentModels);
+			directive.preAttach && directive.preAttach(elem, attr.name, parentModels);
 			var attrDirective = {attrName: attr.name, directive: directive};
 			var index;
 			for (index = attrDirectives.length - 1; index >= 0; index--) {
@@ -914,6 +944,11 @@ new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 			elem.addEventListener(event, listenerFn, false);
 		}
 	})(split[0], split.slice(1), attrName);
+});
+
+new $cheeta.Directive('onaction.').onPreAttach(function(elem, attrName, parentModels) {
+	elem.setAttribute('onclick.onkeydown-space-enter.', elem.getAttribute(attrName));
+	elem.removeAttribute(attrName);
 });
 
 new $cheeta.Directive('show.').onModelValueChange(function(val, elem, attrName, parentModels) {

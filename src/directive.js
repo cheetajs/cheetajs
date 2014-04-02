@@ -8,12 +8,32 @@ $cheeta.Directive = function(name, model) {
 		this.order = val;
 		return this;
 	};
+	this.onPreAttach = function(preAttachFn) {
+		this.preAttach = this.preAttach ? function() {
+			this.preAttach.apply(this, arguments);
+			preAttachFn.apply(this, arguments);
+		} : preAttachFn;
+		return this;		
+	};
 	this.onAttach = function(attachFn) {
-		this.attach = attachFn;
+		this.attach = this.attach ? function() {
+			this.attach.apply(this, arguments);
+			attachFn.apply(this, arguments);
+		} : attachFn;
 		return this;
 	};
+	this.onPostAttach = function(postAttachFn) {
+		this.postAttach = this.postAttach ? function() {
+			this.postAttach.apply(this, arguments);
+			postAttachFn.apply(this, arguments);
+		} : postAttachFn;
+		return this;		
+	};
 	this.onDetach = function(detachFn) {
-		this.detach = detachFn;
+		this.detach = this.detach ? function() {
+			this.detach.apply(this, arguments);
+			detachFn.apply(this, arguments);
+		} : detachFn;		
 		return this;
 	};
 	this.onModelValueChange = function(changeFn, attrValueTransformer) {
@@ -34,7 +54,7 @@ $cheeta.Directive = function(name, model) {
 				changeFn && changeFn.apply(this, [val, elem, attrName, parentModels]);
 			}
 			//return models;
-		}
+		};
 		this.detach = function(elem, attrName, parentModels) {
 			//var models = []; 
 			if (origDetach) origDetach.apply(this);
@@ -43,7 +63,7 @@ $cheeta.Directive = function(name, model) {
 				model.unbindModelChange(elem, attrName);
 			}, true);
 			//return models;
-		}
+		};
 		return this;
 	};
 //	this.lastId = String.fromCharCode(33); 
@@ -105,6 +125,14 @@ $cheeta.Directive = function(name, model) {
 			});
 		}
 		return replaceModelVars(val);
+	};
+	this.extend = function() {
+		var args = Array.prototype.slice.call(arguments, 0);
+		for (var i = 0; i < args.length; i++) {			
+			this.onAttach(args.attach);
+			this.onDetach(args.detach);
+		}
+		return this;
 	};
 //	this.tokenizeAttrVal = function(val, onToken) {
 //		var quote = null, regexpMod = false, index = -1, optionsSplitIndex = val.indexOf(';');
@@ -168,6 +196,7 @@ $cheeta.Directive = function(name, model) {
 //	};
 	$cheeta.model.get(model).addDirective(this);
 };
+
 $cheeta.Directive.get = function(name, parentModels) {
 	if (name.indexOf('data-') == 0) {
 		name = name.substring(5);
@@ -192,4 +221,4 @@ $cheeta.Directive.get = function(name, parentModels) {
 		}
 	}
 	return $cheeta.Directive.get('');
-}
+};
