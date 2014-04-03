@@ -56,7 +56,7 @@ $cheeta.compiler = {
 				models = attrDirective.directive.detach && attrDirective.directive.detach(elem, attrDirective.attrName, parentModels);
 			} else {
 				models = attrDirective.directive.attach && attrDirective.directive.attach(elem, attrDirective.attrName, parentModels);
-				attrDirective.directive.postAttach && attrDirective.directive.postAttach(elem, attr.name, parentModels);
+				attrDirective.directive.postAttach && attrDirective.directive.postAttach(elem, attrDirective.attrName, parentModels);
 			}
 			parentModels = (models || []).concat(parentModels);
 			

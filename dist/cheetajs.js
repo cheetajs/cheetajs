@@ -568,7 +568,7 @@ $cheeta.compiler = {
 				models = attrDirective.directive.detach && attrDirective.directive.detach(elem, attrDirective.attrName, parentModels);
 			} else {
 				models = attrDirective.directive.attach && attrDirective.directive.attach(elem, attrDirective.attrName, parentModels);
-				attrDirective.directive.postAttach && attrDirective.directive.postAttach(elem, attr.name, parentModels);
+				attrDirective.directive.postAttach && attrDirective.directive.postAttach(elem, attrDirective.attrName, parentModels);
 			}
 			parentModels = (models || []).concat(parentModels);
 			
@@ -946,8 +946,9 @@ new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 	})(split[0], split.slice(1), attrName);
 });
 
-new $cheeta.Directive('onaction.').onPreAttach(function(elem, attrName, parentModels) {
+new $cheeta.Directive('onaction.').onPreAttach(function(elem, attrName) {
 	elem.setAttribute('onclick.onkeydown-space-enter.', elem.getAttribute(attrName));
+}).onPostAttach(function(elem, attrName) {
 	elem.removeAttribute(attrName);
 });
 
