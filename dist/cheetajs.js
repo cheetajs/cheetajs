@@ -1,5 +1,74 @@
+if (!Element.prototype.attr) 
+	Element.prototype.attr = function(n, v) {
+		if (v != null) {
+			this.setAttribute(n, v)
+			return this;
+		} else { 
+			return this.getAttribute(n);
+		}
+	}
+if (!Element.prototype.addClass) 
+	Element.prototype.addClass = function(c) {
+		if (c != null) {
+			if (!this.hasClass(c)) {
+				this.setAttribute('class', (this.getAttribute('class') ? this.getAttribute('class') + ' ' : '') + c);
+			}
+		}
+		return this;
+	}
+if (!Element.prototype.removeClass) 
+	Element.prototype.removeClass = function(c) {
+		if (c != null) {
+			if (this.hasClass(c)) {
+				this.setAttribute('class', this.getAttribute('class').replace(new RegExp('(' + c + '$)|( ' + c + ')', 'g'), ''));
+			}
+		}
+		return this;
+	}
+if (!Element.prototype.hasClass) 
+	Element.prototype.hasClass = function(c) {
+		return this.getAttribute('class') && this.getAttribute('class').split(' ').indexOf(c) > -1;
+	}
+if (!document.elem) 
+	document.elem = function(tag, parent, sibling, insertBefore) {
+		var el = document.createElement(tag);
+		if (parent) 
+			if (insertBefore) 
+				parent.insertBefore(el, sibling) 
+			else 
+				sibling && sibling.nextSibling ? parent.insertBefore(el, sibling.nextSibling) : parent.appendChild(el);
+		return el;
+	}
+if (!Element.prototype.on)
+	Element.prototype.on = function(events, fn) {
+		var split = events.split(' ');
+		for (var i = 0; i < split.length; i++) {
+			if (split[i].length > 0) {
+				this.addEventListener(split[i], fn, false);
+			}
+		}
+	}
+if (!Element.prototype.off)
+	Element.prototype.off = function(events, fn) {
+		var split = events.split(' ');
+		for (var i = 0; i < split.length; i++) {
+			if (split[i].length > 0) {
+				this.removeEventListener(split[i], fn, false);
+			}
+		}
+	}
+
 if (!$cheeta) {
 	var $cheeta = $cheeta || function(obj) {
+		if (typeof obj == 'string' || obj instanceof String) {
+			if (obj[0] !== "<") {
+				return $cheeta(document.createElement(obj));
+			} else {
+				var div = document.createElement('div');
+				div.innerHTML = obj;
+				return $cheeta(div.firstChild);
+			}
+		}
 		var wrap = new Array();
 		wrap.push(obj);
 		wrap.on = function(events, fn) {
@@ -9,6 +78,7 @@ if (!$cheeta) {
 					obj.addEventListener(split[i], fn, false);
 				}
 			}
+			return wrap;
 		};
 		wrap.off = function(events, fn) {
 			var split = events.split(' ');
@@ -17,6 +87,11 @@ if (!$cheeta) {
 					obj.removeEventListener(split[i], fn, false);
 				}
 			}
+			return wrap;
+		};
+		wrap.attr = function(n, v) {
+			obj.setAttribute(n, v);
+			return wrap;
 		};
 		return wrap;
 	};
@@ -734,6 +809,9 @@ $cheeta.XHR.prototype = new XMLHttpRequest();
 		this.fn[elem] = function(e) {
 			setTimeout(function() {
 				var _tmp__fn__ = function() {
+					if (elem.type && elem.type.toLowerCase() === "checkbox") {
+						return elem.checked;
+					}
 					return elem.value;
 				};
 				eval(elem.getAttribute(attrName) + '=_tmp__fn__()');
@@ -971,7 +1049,9 @@ new $cheeta.Directive('text.').onModelValueChange(function(val, elem) {
 });
 
 new $cheeta.Directive('value.').onModelValueChange(function(val, elem) {
-	if (elem.value != val) {
+	if (elem.type && elem.type.toLowerCase() === "checkbox") {
+		elem.checked = val;
+	} else if (elem.value != val) {
 		elem.value = val || null;
 	}
 });

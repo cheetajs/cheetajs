@@ -1,5 +1,14 @@
 if (!$cheeta) {
 	var $cheeta = $cheeta || function(obj) {
+		if (typeof obj == 'string' || obj instanceof String) {
+			if (obj[0] !== "<") {
+				return $cheeta(document.createElement(obj));
+			} else {
+				var div = document.createElement('div');
+				div.innerHTML = obj;
+				return $cheeta(div.firstChild);
+			}
+		}
 		var wrap = new Array();
 		wrap.push(obj);
 		wrap.on = function(events, fn) {
@@ -9,6 +18,7 @@ if (!$cheeta) {
 					obj.addEventListener(split[i], fn, false);
 				}
 			}
+			return wrap;
 		};
 		wrap.off = function(events, fn) {
 			var split = events.split(' ');
@@ -17,6 +27,11 @@ if (!$cheeta) {
 					obj.removeEventListener(split[i], fn, false);
 				}
 			}
+			return wrap;
+		};
+		wrap.attr = function(n, v) {
+			obj.setAttribute(n, v);
+			return wrap;
 		};
 		return wrap;
 	};

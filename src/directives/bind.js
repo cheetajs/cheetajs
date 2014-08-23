@@ -4,6 +4,9 @@
 		this.fn[elem] = function(e) {
 			setTimeout(function() {
 				var _tmp__fn__ = function() {
+					if (elem.type && elem.type.toLowerCase() === "checkbox") {
+						return elem.checked;
+					}
 					return elem.value;
 				};
 				eval(elem.getAttribute(attrName) + '=_tmp__fn__()');
