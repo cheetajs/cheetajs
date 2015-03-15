@@ -8,7 +8,8 @@ $cheeta.directive({
 });
 $cheeta.directive({
 	name: 'value.',
-	link: function (elem, attr) {
+	order: 800,
+	link: function (elem, attr, modelRefs) {
 		attr.watch(function (val) {
 			if (elem.type && elem.type.toLowerCase() === 'checkbox') {
 				elem.checked = val;
@@ -16,6 +17,24 @@ $cheeta.directive({
 				elem.value = val || null;
 			}
 		});
+		function elemValue() {
+			if (elem.type && elem.type.toLowerCase() === 'checkbox') {
+				return elem.checked;
+			}
+			if (elem.tagName.toLowerCase() === 'input' || elem.tagName.toLowerCase() === 'textarea') {
+				return elem.value;
+			} else {
+				return elem.innerHTML;
+			}
+		}
+		function listen (models) {
+			elem.on('change keydown keyup', function () {
+				for(var i = 0; i < models.length; i++) {
+					models[i].setValue(elemValue())
+				}
+			});
+		}
+		listen(attr.parse().models);
 	}
 });
 $cheeta.directive({
@@ -72,7 +91,7 @@ $cheeta.directive({
 });
 
 $cheeta.directive({
-	name: 'init.',
+	name: 'focus.',
 	link: function (elem, attr) {
 		attr.watch(function (val) {
 			elem.focus(val);
@@ -92,5 +111,27 @@ $cheeta.directive({
 				elem.setAttribute(baseAttrName, val);
 			}
 		});
+	}
+});
+
+$cheeta.directive({
+	name: 'model.',
+	order: 200,
+	link: function (elem, attr) {
+		//TODO handle app1['myapp,yourapp']
+		var modelDef = attr.value.split(/ *, */g);
+		var models = [];
+
+		for (var i = 0; i < modelDef.length; i++) {
+			//TODO handle app1['123 as 123']
+			var split = modelDef[i].split(/ +: +/g);
+			var name = split[1] || split[0];
+			var as = split.length > 1 ? split[0] : null;
+			var model = attr.parse(name).models[0];
+			model.alias(as);
+			models.push(model);
+//			eval(model.ref() + '=' + model.ref() + '|{}');
+		}
+		return models;
 	}
 });

@@ -1,5 +1,5 @@
 $cheeta.compiler = {
-	recursiveCompile: function (modelsRefs, node, runInlineScripts, erase, skipSiblings, skipNode) {
+	recursiveCompile: function (node, modelsRefs, runInlineScripts, skipSiblings, skipNode) {
 		if (node) {
 			var skip = false;
 			if (!skipNode) {
@@ -19,20 +19,20 @@ $cheeta.compiler = {
 							$cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
 						}
 					}
-					var dir = this.compileDirectives(modelsRefs, node, erase);
+					var dir = this.compileDirectives(node, modelsRefs);
 					skip = dir.skip;
 					modelsRefs = dir.refs;
 				}
 			}
 			if (!skip) {
-				this.recursiveCompile(modelsRefs, node.firstChild, runInlineScripts, erase);
+				this.recursiveCompile(node.firstChild, modelsRefs, runInlineScripts);
 			}
 			if (!skipSiblings) {
-				this.recursiveCompile(modelsRefs, node.nextSibling, runInlineScripts, erase);
+				this.recursiveCompile(node.nextSibling, modelsRefs, runInlineScripts);
 			}
 		}
 	},
-	compileDirectives: function (modelRefs, elem, erase) {
+	compileDirectives: function (elem, modelRefs) {
 		var attr, k;
 		for (k = 0; k < elem.attributes.length; k++) {
 			attr = elem.attributes[k];
@@ -52,17 +52,11 @@ $cheeta.compiler = {
 		this.recursiveCompile.apply(this, arguments);
 		this.runFutures();
 	},
-	compile: function (parentModels, elem, runInlineScripts) {
-		this.doCompile(parentModels, elem, runInlineScripts, false, true);
+	compile: function (elem, modelRefs, runInlineScripts) {
+		this.doCompile(elem, modelRefs, runInlineScripts, true);
 	},
-	compileChildren: function (parentModels, elem, runInlineScripts) {
-		this.doCompile(parentModels, elem, runInlineScripts, false, true, true);
-	},
-	uncompile: function (parentModels, elem) {
-		this.doCompile(parentModels, elem, false, true, true);
-	},
-	uncompileChildren: function (parentModels, elem) {
-		this.doCompile(parentModels, elem, false, true, true, true);
+	compileChildren: function (elem, modelRefs, runInlineScripts) {
+		this.doCompile(elem, modelRefs, runInlineScripts, true, true);
 	},
 	runFutures: function () {
 		var runs = $cheeta.future.evals.slice(0);
