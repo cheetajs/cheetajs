@@ -6,17 +6,17 @@ $cheeta.keyconsts = {
 new $cheeta.Directive('on*').onAttach(function(elem, attrName, parentModels) {
 	this.resolveModelNames(elem, attrName, parentModels);
 	
-	var baseAttrName = attrName.substring(attrName.indexOf('data-') == 0 ? 7 : 2, attrName.length - 1);
+	var baseAttrName = attrName.substring(attrName.indexOf('data-') === 0 ? 7 : 2, attrName.length - 1);
 	var split = baseAttrName.split('-');
 	(function bindEvent(event, keys, attrName) {
-		var fn = function(e) {
+		var fn = function() {
 			eval(elem.getAttribute(attrName));
 		};
-		if (event.indexOf('key') == 0) {
+		if (event.indexOf('key') === 0) {
 			var codes = [];
 			for (var i = 0; i < keys.length; i++) {
 				var key = keys[i];
-				if (key.length == 1) {
+				if (key.length === 1) {
 					codes[i] = key.charCodeAt(0);
 				} else {
 					codes[i] = $cheeta.keyconsts[key.toLowerCase()];

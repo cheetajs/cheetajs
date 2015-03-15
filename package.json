@@ -7,10 +7,12 @@
     "grunt": "~0.3.1"
   },
   "devDependencies": {
-    "grunt": "~0.4.2",
+    "grunt": "^0.4.5",
     "grunt-contrib-concat": "~0.3.0",
+    "grunt-contrib-jshint": "^0.11.0",
     "grunt-contrib-uglify": "~0.2.7",
-    "grunt-devserver": "*"
+    "grunt-devserver": "*",
+    "jshint-stylish": "^1.0.0"
   },
   "repository": {
     "type": "git",

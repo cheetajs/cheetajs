@@ -1,0 +1,1 @@
+//define interceptor framework to easily add interceptor to any object's method like xhr.send()

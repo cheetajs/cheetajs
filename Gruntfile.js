@@ -1,11 +1,13 @@
 module.exports = function(grunt) {
-
+  grunt.option('color', false);
   // Project configuration.
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
     concat: {
     	build: {
-    		src: ['src/dom.js', 'src/model.js', 'src/directive.js', 'src/compiler.js', 'src/http.js', 'src/directives/*.js', 'src/hash.js'],
+    		src: ['src/lang.js', 'src/dom.js', 'src/model.js', 'src/directive.js', 'src/compiler.js',
+    		        'src/http.js', 'src/api.js', 'src/interceptor.js',
+    		        'src/directives/*.js', 'src/hash.js'],
     		dest: 'dist/<%= pkg.name %>.js'
     	}
     },
@@ -20,14 +22,34 @@ module.exports = function(grunt) {
     	  }
       }
     },
-    devserver: {server: {}}
+    devserver: {server: {}},
+    watch: {
+      js: {
+        files: ['src/{,*/}*.js'],
+        tasks: ['jshint', 'concat', 'uglify']
+      }
+    },
+    jshint: {
+      options: {
+        jshintrc: '.jshintrc',
+        reporter: require('jshint-stylish')
+      },
+      all: [
+        'Gruntfile.js',
+        'src/{,*/}*.js',
+        'src/vendor/*',
+        'test/spec/{,*/}*.js'
+      ]
+    }
   });
 
   grunt.loadNpmTasks('grunt-devserver');
 
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-uglify');
+  grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-contrib-jshint');
 
-  grunt.registerTask('default', ['concat', 'uglify']);
+  grunt.registerTask('default', ['concat', 'uglify', 'watch']);
 
 };

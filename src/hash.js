@@ -35,7 +35,7 @@ $cheeta.hash = {
 		}
 	},
 	set: function(key, val) {
-		if (val == undefined) {
+		if (val === undefined) {
 			val = key;
 			key = '';
 		}
@@ -45,8 +45,8 @@ $cheeta.hash = {
 		var toHash = function() {
 			var hash = _this.keyval[''] || '';
 			for (var key in _this.keyval) {
-				if (key.length > 0) {
-					hash += (hash.length > 0 ? '&' : '') + key + "=" + _this.keyval[key];
+				if (key.length) {
+					hash += (hash.length > 0 ? '&' : '') + key + '=' + _this.keyval[key];
 				}
 			}
 			return hash;
@@ -57,29 +57,29 @@ $cheeta.hash = {
 	init: function() {
 		var _this = this;
 		var updateHash = function() {
-			var hash = window.location.hash, index = 0, key = '', val, allKeys = {};
+			var hash = window.location.hash, index = 0, key = '', val, allKeys = {}, prev;
 			try {
-				hash = hash.substring(hash.length > 1 && hash.charAt(2) == '&' ? 2 : 1);
+				hash = hash.substring(hash.length > 1 && hash.charAt(2) === '&' ? 2 : 1);
 				for (var i = 0; i <= hash.length; i++) {
-					if (hash.charAt(i) == '&' || i == hash.length) {
+					if (hash.charAt(i) === '&' || i === hash.length) {
 						val = hash.substring(index, i);
-						if (_this.keyval[key] == null || _this.keyval[key] != val) {
-							var prev = _this.keyval[key]; 
+						if (_this.keyval[key] == null || _this.keyval[key] !== val) {
+							prev = _this.keyval[key];
 							_this.keyval[key] = val;
 							_this.notify(key, val, prev);
 						}
 						index = i + 1;
 						allKeys[key] = true;
 						key = '';
-					} else if (hash.charAt(i) == '=') {
+					} else if (hash.charAt(i) === '=') {
 						key = hash.substring(index, i);
 						index = i + 1;
 					}
 				}
 				
-				for (var key in _this.keyval) {
+				for (key in _this.keyval) {
 					if (allKeys[key] == null) {
-						var prev = _this.keyval[key];
+						prev = _this.keyval[key];
 						delete _this.keyval[key];
 						_this.notify(key, null, prev);
 					} 
@@ -87,7 +87,7 @@ $cheeta.hash = {
 			} finally {
 				_this.value = hash;
 			}
-		}
+		};
 		updateHash();
 		window.addEventListener('hashchange', function () {
 			updateHash();
@@ -105,10 +105,10 @@ $cheeta.route = $cheeta.route || function(map, hashVal) {
 	var len = 0;
 	var url = null;
 	for (var key in map) {
-		if (hashVal.indexOf(key) == 0 && len < key.length) {
+		if (hashVal.indexOf(key) === 0 && len < key.length) {
 			len = key.length;
 			url = map[key];
 		}
 	}
 	return url;
-}
+};
