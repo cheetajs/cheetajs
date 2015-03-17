@@ -11,6 +11,14 @@ Object.isBoolean = function(v) {
     return typeof v === 'boolean';
 };
 
+Object.isObject = function(v) {
+    return v instanceof Object;
+};
+
+Object.isArray = function(v) {
+    return Array.isArray(v);
+};
+
 Object.copy = function(from, to) {
     to = to || {};
     for (var key in from) {

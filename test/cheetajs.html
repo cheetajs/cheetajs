@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script src="../dist/cheetajs.js"></script>
+<!--<script src="cheetajs.js"></script>-->
 <style type="text/css">
 div {
 	margin-left: 10px;
 }
 </style>
+	<link rel="stylesheet" href="//code.jquery.com/qunit/qunit-1.17.1.css">
+
 </head>
 <body data-init.="root3.value = 99"  style=".value: 12">
-	href<div data-text.="location.href == root3.value"></div>
+	href<div id="b" data-text.="location.href == root3.value"></div>
 	href<div data-text.="window.location.href == 'd'"></div>
 	<div data-text.="root.child.value"></div>
 	root1 as r; root3.child as c
@@ -101,7 +103,7 @@ div {
 					}
 				}
 			},
-			projects: [
+			projects: [{
 				'github': ['angular-file-upload', 'cheetajs'],
 				'googlecode': ['gwt-annotation'],
 				'others': [{
@@ -111,7 +113,7 @@ div {
 					site: 'cheetaj2.com',
 					projectName: 'cheetaj2'
 				}]
-			],
+			}],
 			contact: {
 				tel: '416-878-5070',
 				address: '832 Bay Street',
@@ -131,16 +133,16 @@ div {
 		root1.array = [{value:1},{value:2},{value:3}];
 		root.child.value = 11;
 	}, 1000);
-	$cheeta.location.watch(function(hash) {
+	$cheeta.hash.watch(function(hash) {
 		console.log('path is changed', hash);
 	});
-	$cheeta.location.watch('myName', function(val, oldVal) {
+	$cheeta.hash.watch('myName', function(val, oldVal) {
 		console.log('name is changed', val, oldVal);
 	});
-	$cheeta.location.watch('myLastName', function(val, oldVal) {
+	$cheeta.hash.watch('myLastName', function(val, oldVal) {
 		console.log('last name is changed', val, oldVal);
 	});
-	$cheeta.location.watch('test', function(val, oldVal) {
+	$cheeta.hash.watch('test', function(val, oldVal) {
 		console.log('test is changed', val, oldVal);
 	});
 	
@@ -156,5 +158,7 @@ div {
 		$cheeta.location.set('another/path');
 	}, 4000);
 	</script>
+
+	<!--<script src="//code.jquery.com/qunit/qunit-1.17.1.js"></script>-->
 </body>
 </html>

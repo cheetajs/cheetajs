@@ -4,7 +4,7 @@ $cheeta.compiler = {
 			var skip = false;
 			if (!skipNode) {
 				if (node.nodeType === 1) {
-					if (node.tagName.toLowerCase() === 'script' && !erase) {
+					if (node.tagName.toLowerCase() === 'script') {
 						if (runInlineScripts && (node.parentNode == null ||
 							node.parentNode.tagName.toLowerCase() !== 'head') &&
 							(node.type == null || node.type === '' || node.type === 'text/javascript')) {
@@ -33,20 +33,35 @@ $cheeta.compiler = {
 		}
 	},
 	compileDirectives: function (elem, modelRefs) {
-		var attr, k;
-		for (k = 0; k < elem.attributes.length; k++) {
-			attr = elem.attributes[k];
-			var directives = $cheeta.directives.get(attr.name);
-			for (k = 0; k < directives.length; k++) {
-				var dir = directives[k];
-				var refs = dir.link(elem, attr.name, modelRefs);
-				if (refs) {
-					modelRefs = Object.copy(modelRefs);
-					Object.copy(refs, modelRefs);
+		var directives = this.getAllDirectivesWithAttr(elem), isTemplate;
+		for (var k = 0; k < directives.length; k++) {
+			var dir = directives[k];
+			var refs = dir.directive.linkFn(elem, dir.attrName, modelRefs);
+			if (refs) {
+				modelRefs = Object.copy(modelRefs);
+				Object.copy(refs, modelRefs);
+			}
+			isTemplate = isTemplate || dir.directive.isTemplate;
+		}
+		return {'refs': modelRefs, skip: isTemplate};
+	},
+	getAllDirectivesWithAttr: function(elem) {
+		var attr, k, directives = [];
+		var attributes = elem.attributes;
+		attributes[-1] = {name: elem.tagName};
+		for (k = -1; k < attributes.length; k++) {
+			attr = attributes[k];
+			if (attr.name.indexOf('.', attr.name.length - 1) > -1) {
+				var dirs = $cheeta.directives.get(attr.name);
+				for (var i = 0; i < dirs.length; i++) {
+					directives.push({directive:dirs[i], attrName: attr.name});
 				}
 			}
 		}
-		return {'refs': modelRefs, skip: directives.isTemplate};
+		directives.sort(function (a, b) {
+			return (a.directive.order || 1000) - (b.directive.order || 1000);
+		});
+		return directives;
 	},
 	doCompile: function () {
 		this.recursiveCompile.apply(this, arguments);
@@ -59,12 +74,12 @@ $cheeta.compiler = {
 		this.doCompile(elem, modelRefs, runInlineScripts, true, true);
 	},
 	runFutures: function () {
-		var runs = $cheeta.future.evals.slice(0);
+		var runs = $cheeta.future.evals;
 		$cheeta.future.evals = [];
 		for (var i = 0; i < runs.length; i++) {
 			var expr = runs[i];
-			if (Array.isArray(expr)) {
-				expr[0].call(expr.slice(1));
+			if (Object.isFunction(expr)) {
+				expr();
 			} else {
 				eval(expr);
 			}

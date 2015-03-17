@@ -2,14 +2,13 @@ $cheeta.directive({
 	name: 'watch*',
 	link: function(elem, attr) {
 		attr.watch(function() {
-			eval(elem.attr('onwatch.'));
+			eval(elem.attr('onwatch'));
 		});
 	}
 });
 $cheeta.directive({
-	name: 'value.',
-	order: 800,
-	link: function (elem, attr, modelRefs) {
+	name: 'value',
+	link: function (elem, attr) {
 		attr.watch(function (val) {
 			if (elem.type && elem.type.toLowerCase() === 'checkbox') {
 				elem.checked = val;
@@ -17,6 +16,13 @@ $cheeta.directive({
 				elem.value = val || null;
 			}
 		});
+	}
+});
+$cheeta.directive({
+	name: 'bind',
+	order: 800,
+	link: function (elem, attr) {
+		$cheeta.directives.get('value')[0].link(elem, attr);
 		function elemValue() {
 			if (elem.type && elem.type.toLowerCase() === 'checkbox') {
 				return elem.checked;
@@ -30,15 +36,15 @@ $cheeta.directive({
 		function listen (models) {
 			elem.on('change keydown keyup', function () {
 				for(var i = 0; i < models.length; i++) {
-					models[i].setValue(elemValue())
+					models[i].setValue(elemValue());
 				}
 			});
 		}
-		listen(attr.parse().models);
+		listen(attr.models());
 	}
 });
 $cheeta.directive({
-	name: 'text.',
+	name: 'text',
 	link: function (elem, attr) {
 		attr.watch(function (val) {
 			elem.innerHTML = '';
@@ -47,7 +53,7 @@ $cheeta.directive({
 	}
 });
 $cheeta.directive({
-	name: 'html.',
+	name: 'html',
 	link: function (elem, attr) {
 		attr.watch(function (val) {
 			if (val !== elem.innerHTML) {
@@ -58,15 +64,15 @@ $cheeta.directive({
 });
 
 $cheeta.directive({
-	name: 'show.',
+	name: 'show',
 	isTemplate: true,
-	link: function (elem, attr) {
+	link: function (elem, attr, modelRefs) {
 		attr.watch(function (val) {
 			if (val) {
 				elem.style.display = '';
 				if (!elem.getAttribute('OoCompiled')) {
 					elem.setAttribute('OoCompiled', true);
-					$cheeta.compiler.compileChildren(parentModels, elem);
+					$cheeta.compiler.compileChildren(elem, modelRefs);
 				}
 			} else {
 				elem.style.display = 'none';
@@ -76,22 +82,22 @@ $cheeta.directive({
 });
 
 $cheeta.directive({
-	name: 'onaction.',
+	name: 'onaction',
 	link: function (elem, attr) {
-		elem.setAttribute('onclick.onkeydown-space-enter.', attr.value);
+		elem.setAttribute('onclick.onkeydown-space-enter', attr.value);
 		attr.remove();
 	}
 });
 
 $cheeta.directive({
-	name: 'init.',
+	name: 'init',
 	link: function (elem, attr) {
-		$cheeta.future.evals.push(attr.value);
+		$cheeta.future.evals.push(attr.eval);
 	}
 });
 
 $cheeta.directive({
-	name: 'focus.',
+	name: 'focus',
 	link: function (elem, attr) {
 		attr.watch(function (val) {
 			elem.focus(val);
@@ -103,8 +109,7 @@ $cheeta.directive({
 	name: '',
 	link: function (elem, attr) {
 		attr.watch(function (val) {
-			var baseAttrName = attr.name.substring(
-				attr.name.indexOf('data-') === 0 ? 5 : 0, attr.name.length - 1);
+			var baseAttrName = attr.key;
 			if (val == null) {
 				elem.removeAttribute(baseAttrName);
 			} else {
@@ -115,21 +120,21 @@ $cheeta.directive({
 });
 
 $cheeta.directive({
-	name: 'model.',
+	name: 'model',
 	order: 200,
-	link: function (elem, attr) {
+	link: function (elem, attr, allAttr, modelRefs) {
 		//TODO handle app1['myapp,yourapp']
 		var modelDef = attr.value.split(/ *, */g);
-		var models = [];
+		var models = {};
 
 		for (var i = 0; i < modelDef.length; i++) {
 			//TODO handle app1['123 as 123']
 			var split = modelDef[i].split(/ +: +/g);
 			var name = split[1] || split[0];
 			var as = split.length > 1 ? split[0] : null;
-			var model = attr.parse(name).models[0];
+			var model = $cheeta.model(name, modelRefs);
 			model.alias(as);
-			models.push(model);
+			models[as || model.names[0]] = model;
 //			eval(model.ref() + '=' + model.ref() + '|{}');
 		}
 		return models;

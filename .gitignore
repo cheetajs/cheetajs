@@ -1,3 +1,5 @@
+bower_components/
+bower_components
 .settings
 .metadata
 .backup
@@ -21,3 +23,4 @@ node_modules
 .externalToolBuilders
 grunt.sh
 *.iml
+.bower_components/

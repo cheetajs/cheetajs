@@ -1,3 +1,22 @@
+$cheeta.url = function(url) {
+	var parser = document.createElement('a');
+	parser.href = url;
+	parser.param = function (k, v) {
+		parser.search += (parser.search.indexOf('?') > -1 ? '&' : '?') + k + '=' + v;
+		return parser;
+	};
+	parser.params = function (params) {
+		if (params) {
+			for (var key in params) {
+				if (!$cheeta.isFunction(params[key])) {
+					parser.param(key, params[key]);
+				}
+			}
+		}
+		return parser;
+	};
+	return parser;
+};
 $cheeta.http = function(target) {
 	target = target || this;
 	var xhr = new XMLHttpRequest();

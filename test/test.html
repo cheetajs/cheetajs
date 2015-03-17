@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.17.1.css">
+    <script src="../dist/cheetajs.js"></script>
+</head>
+<body model.="person">
+    <div text.="person.name"></div>
+    <code test.="$elem.innerHTML == 'Danial'" init.="test.init()"></code>
+    <code test.="person.name = 'Danial Farid'; $elem.innerHTML == 'Danial Farid'"></code>
+    <input type="text" value.="defaultNick" bind.="person.nick" title.="person.nick" id="value">
+    <div id="qunit"></div>
+    <script>
+        Oo.future(function() {
+            $model.test = {};
+            $model.test.init = function() {
+                person = {};
+                defaultNick = 'Default Name';
+                person.name = 'Danial';
+            };
+
+            QUnit.test('text', function (assert) {
+                assert.equal($('#name').val(), '');
+                person.name = 'Tom';
+                Test.assertFuture(assert, function () {
+                    assert.equal($('#name').text(), 'Tom');
+                    person.name = 'Jerry';
+                    Test.assertFuture(assert, function () {
+                        assert.equal($('#name').text(), 'Jerry');
+                    });
+                });
+            });
+            QUnit.test('value', function (assert) {
+                Test.assertFuture(assert, function () {
+                    assert.equal($('#value').val(), 'Joe');
+                    person.nick = 'Tom';
+                    Test.assertFuture(assert, function () {
+                        assert.equal($('#value').val(), 'Tom');
+                        var keyVal = 65;
+                        $("#value").trigger ( {
+                            type: 'change', keyCode: keyVal, which: keyVal, charCode: keyVal
+                        } );
+                        var e = $.Event("change");
+                        e.which = 75;
+                        e.keyCode = 75;
+
+                        $("#value").trigger(e);
+//                        $('#value').type('Jerry');
+                        Test.assertFuture(assert, function () {
+                            assert.equal(person.nick, 'Jerry');
+                            assert.equal($('#value').attr('title'), 'Jerry');
+                        });
+                    });
+                });
+            });
+        });
+    </script>
+    <script src="http://code.jquery.com/qunit/qunit-1.17.1.js"></script>
+    <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+    <script src="common.js"></script>
+</body>
+</html>

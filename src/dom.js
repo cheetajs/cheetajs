@@ -5,8 +5,14 @@ if (!Element.prototype.attr) {
 			this.setAttribute(n, v);
 			return this;
 		} else {
-			return this.getAttribute(n) || this.getAttribute('data-' + n);
+			return this.getAttribute(n) || this.getAttribute('data-' + n) ||
+				(n.indexOf('.', n.length - 1) > -1 &&this.getAttribute(n.substring(n.length - 1)));
 		}
+	};
+}
+if (!Element.prototype.removeAttr) {
+	Element.prototype.removeAttr = function (n) {
+		return this.removeAttribute(n) || this.removeAttribute('data-' + n);
 	};
 }
 if (!Element.prototype.addClass) {

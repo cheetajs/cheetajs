@@ -19,6 +19,7 @@
   "evil": true,
   "globals": {
     "$cheeta":false,
-    "Oo":false
+    "Oo":false,
+    "El":false
   }
 }
