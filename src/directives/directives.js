@@ -34,6 +34,7 @@ $cheeta.directive({
 			}
 		}
 		function listen (models) {
+			//todo exclude keys that don't edit like arrow keys
 			elem.on('change keydown keyup', function () {
 				for(var i = 0; i < models.length; i++) {
 					models[i].setValue(elemValue());
@@ -92,7 +93,7 @@ $cheeta.directive({
 $cheeta.directive({
 	name: 'init',
 	link: function (elem, attr) {
-		$cheeta.future.evals.push(attr.eval);
+		$cheeta.future(attr.evaluate);
 	}
 });
 
@@ -122,19 +123,35 @@ $cheeta.directive({
 $cheeta.directive({
 	name: 'model',
 	order: 200,
+	lastId: 0,
 	link: function (elem, attr, allAttr, modelRefs) {
 		//TODO handle app1['myapp,yourapp']
-		var modelDef = attr.value.split(/ *, */g);
+		var modelDef = attr.value.split(/ *[,;] */g);
 		var models = {};
 
+		function makeWatch(m, ref) {
+			return function() {
+				m.value = attr.evaluate({}, ref);
+				m.valueChange();
+			};
+		}
+
 		for (var i = 0; i < modelDef.length; i++) {
+			if (modelDef[i] === '') continue;
 			//TODO handle app1['123 as 123']
-			var split = modelDef[i].split(/ +: +/g);
-			var name = split[1] || split[0];
+			var split = modelDef[i].split(/ *: */g);
+			var ref = split[1] || split[0];
 			var as = split.length > 1 ? split[0] : null;
-			var model = $cheeta.model(name, modelRefs);
-			model.alias(as);
-			models[as || model.names[0]] = model;
+			if (as) {
+				var m = new $cheeta.Model(as, null);
+				m.refId = this.lastId++;
+				m.value = attr.evaluate({}, ref);
+				attr.watch(makeWatch(m, ref), ref);
+				models[as] = m;
+			} else {
+				var model = $cheeta.model(ref, modelRefs);
+				models[model.names[0]] = model;
+			}
 //			eval(model.ref() + '=' + model.ref() + '|{}');
 		}
 		return models;

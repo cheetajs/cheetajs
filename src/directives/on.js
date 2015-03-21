@@ -11,7 +11,7 @@ $cheeta.directive({
 	},
 	bindEvent: function(elem, attr, event, keys) {
 		var listenerFn = function(e) {
-			var result = attr.eval({$event: e});
+			var result = attr.evaluate({$event: e});
 			if (result.preventDefault !== false) {
 				e.preventDefault();
 			}
