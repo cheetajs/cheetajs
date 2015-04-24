@@ -22,7 +22,7 @@ $cheeta.directive({
 	name: 'bind',
 	order: 800,
 	link: function (elem, attr) {
-		$cheeta.directives.get('value')[0].link(elem, attr);
+		$cheeta.directives.get('value')[0].directive.link(elem, attr);
 		function elemValue() {
 			if (elem.type && elem.type.toLowerCase() === 'checkbox') {
 				return elem.checked;
@@ -84,9 +84,9 @@ $cheeta.directive({
 
 $cheeta.directive({
 	name: 'onaction',
-	link: function (elem, attr) {
-		elem.setAttribute('onclick.onkeydown-space-enter', attr.value);
-		attr.remove();
+	link: function (elem, attr, allAttr, modelRefs) {
+		$cheeta.compiler.compileAttr(elem,
+			{name: 'onclick.onkeydown-space-enter.', value: attr.value}, modelRefs);
 	}
 });
 
@@ -148,9 +148,11 @@ $cheeta.directive({
 				m.value = attr.evaluate({}, ref);
 				attr.watch(makeWatch(m, ref), ref);
 				models[as] = m;
+				models.$$last$$ = m;
 			} else {
 				var model = $cheeta.model(ref, modelRefs);
 				models[model.names[0]] = model;
+				models.$$last$$ = model;
 			}
 //			eval(model.ref() + '=' + model.ref() + '|{}');
 		}

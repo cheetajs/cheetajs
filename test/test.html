@@ -10,7 +10,7 @@
         <code test.="person.name = 'Danial Farid'; Is.eq($elem.html(), 'Danial Farid')"></code>
     </div>
     <div>
-        *Nick <input type="text" value.="defaultNick" bind.="person.nick" title.="person.nick" id="value">
+        *Nick <input type="text" value.="defaultNick" bind.=".nick" title.="person.nick" id="value">
         <span text.="person.nick"></span>
         <code test.="defaultNick = 'danialfarid'; Is.eql($elem.value, 'danialfarid', defaultNick)"></code>
         <code test.="person.nick = 'cheetah'; Is.eql($elem.value, $elem.attr('title'), $elem[1].text(), 'cheetah')"></code>
@@ -21,7 +21,22 @@
             <li for.="car : person.cars"><div text.="car"></div></li>
             <li for.="r : num"><div text.="r"></div></li>
         </ul>
+        <button onaction.="num++" tabindex="1">Add num</button>
     </div>
+    <table init.="x = 10; y=20">
+        <tr for.="i: x">
+            <td for.="j: y">
+                <div text.="i + ':' + j"></div>
+            </td>
+        </tr>
+    </table>
+    <table init.="x=10; y=5">
+        <tr for.="i: y">
+            <td for.="j: x">
+                <div text.="i + ':' + j"></div>
+            </td>
+        </tr>
+    </table>
     <script>
         Oo.future(function() {
             var T = Oo.directive('test');

@@ -7,11 +7,11 @@ $cheeta.directive({
 		var refElem = document.createComment(elem.outerHTML);
 		elem.addAfter(refElem);
 		var array = this.parse(attr.value);
-		elem.removeAttr('for.').attr('display', 'none');
+		elem.removeAttr('for.');
 		var model = $cheeta.model(array.ref, modelRefs);
 		elem.attr('model.', array.variable + ':<M>;' + (elem.attr('model.') || ''));
 
-		model.watch(elem, function(val, oldVal) {
+		function watchFn(val, oldVal) {
 			if (elem.parent() != null) {
 				elem.remove();
 				oldVal = 0;
@@ -23,7 +23,7 @@ $cheeta.directive({
 				}
 			}
 			repeatElements(val, oldVal, true);
-		});
+		}
 		function repeatElements(val, oldVal, isRange) {
 			var i;
 			if (val > oldVal) {
@@ -40,6 +40,10 @@ $cheeta.directive({
 					refElem.prev().remove();
 				}
 			}
+		}
+		model.watch(elem, watchFn);
+		if (model.value != null) {
+			watchFn(model.value, null);
 		}
 	},
 	parse : function(val) {

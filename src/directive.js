@@ -24,17 +24,30 @@ $cheeta.directives = {
 			split.pop();
 		}
 		for (i = 0; i < split.length; i++) {
-			var n = split[i];
-			dirs = dirs.concat(this.directives[split[i]] || []);
-			for (var j = 0; j < this.globals.length; j++) {
-				var g = this.globals[j].name;
-				if (n.replace(/^data-/, '').indexOf(0, g.substring(g.length - 1)) === 0) {
-					dirs.push(this.globals[i]);
+			var n = split[i], j = 0, ds = [];
+			var directives = this.directives[split[i]];
+			if (directives) {
+				for (j = 0; j < directives.length; j++) {
+					ds.push({directive: directives[j], name: n});
 				}
+			}
+			if (!ds.length) {
+				for (j = 0; j < this.globals.length; j++) {
+					var g = this.globals[j].name;
+					if (n.replace(/^data-/, '').indexOf(g.substring(0, g.length - 1)) === 0) {
+						ds.push({directive: this.globals[j], name: n});
+					}
+				}
+			}
+			dirs = dirs.concat(ds);
+		}
+		if (!dirs.length) {
+			for (i = 0; i < this.defaults.length; i++) {
+				dirs.push({directive: this.defaults[i], name: name});
 			}
 		}
 
-		return dirs.length ? dirs : this.defaults;
+		return dirs;
 	},
 	modelVarRegExp: /(((((\. *)?[^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+)|\[ *([^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+|'(\\'|[^'])*') *\]) *)+\(?)|('(\\'|[^'])*')/g,
 	reservedWords: (function() {
@@ -49,6 +62,7 @@ $cheeta.directives = {
 	parse: function(ref, modelRefs) {
 		function hasReserved(ref) {
 			var c = ref.charAt(0);
+			if (c === '.') {return false;}
 			if (c.toUpperCase() === c || c === '$' || c === '_' || name === 'window') {
 				return true;
 			}
@@ -83,7 +97,7 @@ $cheeta.directives = {
 					var index = functionPos(match.substring(0, bracketIndex));
 					var append = match.substring(index);
 					var mRef = match.substring(0, index);
-					if (mRef.indexOf('.') === 0) {mRef = modelRefs[0].name + mRef;}
+					if (match.indexOf('.') === 0) {mRef = modelRefs.$$last$$.names[0] + mRef;}
 					var model = $cheeta.model(mRef, modelRefs);
 					if (model != null) {
 						result.models.push(model);
@@ -96,14 +110,14 @@ $cheeta.directives = {
 		return result;
 	},
 	modelAttr: function (elem, modelRefs) {
-		return function (name) {
-			var attr = elem.attributes[name];
+		return function (attr) {
+			if (Object.isString(attr)) { attr = elem.attributes[name];}
 			if (attr == null) {
 				return {modelValue: function(){return undefined;}};
 			}
 			attr.key = attr.name.replace(/^data-/, '').replace(/\.$/, '');
 			attr.remove = function() {
-				elem.removeAttribute(name);
+				elem.removeAttribute(attr.name);
 			};
 			attr.parseResult = {};
 			attr.resolve = function(ref, mRefs) {
@@ -196,10 +210,10 @@ $cheeta.directive = function(def) {
 	if (Object.isString(def)) {
 		return $cheeta.directives.get(def);
 	}
-	def.linkFn =  function (elem, attrName, modelRefs) {
+	def.linkFn =  function (elem, attr, modelRefs) {
 		var allAttr = $cheeta.directives.modelAttr(elem, modelRefs);
 		elem.M = modelRefs;
-		return def.link.call(this, elem, allAttr(attrName), allAttr, modelRefs);
+		return def.link.call(this, elem, allAttr(attr), allAttr, modelRefs);
 	};
 
 	$cheeta.directives.add(def);

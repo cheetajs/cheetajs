@@ -7,18 +7,20 @@ $cheeta.directive({
 	},
 	link: function (elem, attr) {
 		var split = attr.key.split('-');
-		this.bindEvent(elem, attr, split[0], split.slice(1));
+		this.bindEvent(elem, attr, split[0].substring(2), split.slice(1));
 	},
 	bindEvent: function(elem, attr, event, keys) {
 		var listenerFn = function(e) {
 			var result = attr.evaluate({$event: e});
-			if (result.preventDefault !== false) {
-				e.preventDefault();
+			if (result != null) {
+				if (result.preventDefault !== false) {
+					e.preventDefault();
+				}
+				if (result.stopPropagation !== false) {
+					e.stopPropagation();
+				}
+				return Object.isObject(result) ? result.value : result;
 			}
-			if (result.stopPropagation !== false) {
-				e.stopPropagation();
-			}
-			return Object.isObject(result) ? result.value : result;
 		};
 		if (event.indexOf('key') === 0) {
 			var codes = this.extractKeyCodes(keys);
@@ -39,7 +41,7 @@ $cheeta.directive({
 			if (key.length === 1) {
 				codes[i] = key.charCodeAt(0);
 			} else {
-				codes[i] = $cheeta.keyconsts[key.toLowerCase()];
+				codes[i] = this.keyconsts[key.toLowerCase()];
 				if (codes[i] == null) {
 					codes[i] = parseInt(key);
 					if (isNaN(codes[i])) {

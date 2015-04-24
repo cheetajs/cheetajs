@@ -19,7 +19,7 @@ $cheeta.compiler = {
 							$cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
 						}
 					}
-					var dir = this.compileDirectives(node, modelsRefs);
+					var dir = this.compileAllDirectives(node, modelsRefs);
 					skip = dir.skip;
 					modelsRefs = dir.refs;
 				}
@@ -32,11 +32,15 @@ $cheeta.compiler = {
 			}
 		}
 	},
-	compileDirectives: function (elem, modelRefs) {
-		var directives = this.getAllDirectivesWithAttr(elem), isTemplate;
+	compileAllDirectives: function (elem, modelRefs) {
+		var directives = this.getAllDirectivesWithAttr(elem);
+		return this.compileDirectives(elem, directives, modelRefs);
+	},
+	compileDirectives: function (elem, directives, modelRefs) {
+		var isTemplate = false;
 		for (var k = 0; k < directives.length; k++) {
 			var dir = directives[k];
-			var refs = dir.directive.linkFn(elem, dir.attrName, modelRefs);
+			var refs = dir.directive.linkFn(elem, {name: dir.name, value: dir.value}, modelRefs);
 			if (refs) {
 				modelRefs = Object.copy(modelRefs);
 				Object.copy(refs, modelRefs);
@@ -45,18 +49,27 @@ $cheeta.compiler = {
 		}
 		return {'refs': modelRefs, skip: isTemplate};
 	},
+	compileAttr: function (elem, attr, modelRefs) {
+		return this.compileDirectives(elem, this.getDirectives(elem, attr), modelRefs);
+	},
+	getDirectives: function(elem, attr) {
+		var directives = [];
+		if (attr.name.indexOf('.', attr.name.length - 1) > -1) {
+			var dirs = $cheeta.directives.get(attr.name);
+			for (var i = 0; i < dirs.length; i++) {
+				dirs[i].value = attr.value;
+				directives.push(dirs[i]);
+			}
+		}
+		return directives;
+	},
 	getAllDirectivesWithAttr: function(elem) {
 		var attr, k, directives = [];
 		var attributes = elem.attributes;
 		attributes[-1] = {name: elem.tagName};
 		for (k = -1; k < attributes.length; k++) {
 			attr = attributes[k];
-			if (attr.name.indexOf('.', attr.name.length - 1) > -1) {
-				var dirs = $cheeta.directives.get(attr.name);
-				for (var i = 0; i < dirs.length; i++) {
-					directives.push({directive:dirs[i], attrName: attr.name});
-				}
-			}
+			directives = directives.concat(this.getDirectives(elem, attr));
 		}
 		directives.sort(function (a, b) {
 			return (a.directive.order || 1000) - (b.directive.order || 1000);
