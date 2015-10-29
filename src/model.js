@@ -15,7 +15,7 @@ $cheeta.Model = function(name, parent) {
 			} else {
 				var expr = '', model = this;
 				while (model.parent != null && model.names[0] != null) {
-					expr = (model.needBracket ? '[\'' + model.names[0] + '\']' :
+					expr = (!isNaN(model.names[0]) ? '[\'' + model.names[0] + '\']' :
 							'.' + model.names[0]) + expr;
 					model = model.parent;
 				}
@@ -32,14 +32,13 @@ $cheeta.Model = function(name, parent) {
 			this.parent.value[this.names[0]] = value;
 		}
 	};
-	this.child = function (name, bracket, skip) {
+	this.child = function (name, skip) {
 		if (this.value == null) {
 			this.value = this.isArray ? [] : {};
 		}
 		var model = this.children[name];
 		if (model === undefined) {
 			model = new $cheeta.Model(name, this);
-			model.needBracket = bracket;
 			if (!skip) {
 				model.interceptProp(this.value, name);
 			}
@@ -82,7 +81,7 @@ $cheeta.Model = function(name, parent) {
 		}
 	};
 	this.interceptProp = function(value, name, skipDefine) {
-		//console.log('intercepting', name);
+		console.log('intercepting', value, name, skipDefine);
 		if (value != null) {
 			var model = this;
 			var beforeValue = value[name];
@@ -162,7 +161,7 @@ $cheeta.model = function(ref, modelRefs) {
 	var parentModel = modelRefs[split[0]] || $cheeta.model.root;
 
 	for (var k = parentModel === $cheeta.model.root ? 0 : 1; k < split.length; k++) {
-		var needBracket = false, modelName = split[k];
+		var modelName = split[k];
 		//if (modelName.search(/\( *$/) > -1) {
 		//	if (modelName.search(/\] */) > -1) {
 		//		modelName = '[' + modelName;
@@ -170,10 +169,9 @@ $cheeta.model = function(ref, modelRefs) {
 		//	break;
 		//} else
 		if (modelName.search(/\] *$/) > -1) {
-			needBracket = true;
 			modelName = modelName.replace(/^ *'|'? *] *$/g, '');
 		}
-		parentModel = parentModel.children[modelName] || parentModel.child(modelName, needBracket, false);
+		parentModel = parentModel.children[modelName] || parentModel.child(modelName, false);
 	}
 	return parentModel;
 };

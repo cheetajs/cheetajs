@@ -68,6 +68,7 @@ $cheeta.http = function(target) {
 		xhr.onSuccess(success);
 		xhr.onError(error);
 		xhr.onProgress(progress);
+		return xhr;
 	};
 	xhr.onComplete = function(callback) {
 		if (callback) completeCallbacks.push(callback);

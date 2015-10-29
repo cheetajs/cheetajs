@@ -1,25 +1,27 @@
 //$cheeta.api = new Service({
 //    url: 'api url like http://mysite.com/api/user/{id}/fans',
 //    method: 'GET|POST|PUT|DELETE',
-$cheeta.api = function (config){
-    if ($cheeta.isString(config)) {
+$cheeta.resource = function (config){
+    if (Object.isString(config)) {
         config = {url: config};
     }
     var ResourceClass = function (obj) {
-        $cheeta.copy(obj, this);
+        Object.copy(obj, this);
 
         var _this = this;
 
         function callXHR(method, obj, fn, err) {
             _this.$xhr().open(method, _this.$resolveUrl(), config.async || true).send(obj)
-                .after(function (x, data) {
-                    if (data != null) {
-                        $cheeta.copy(data, _this);
-                    }
-                    fn.call(_this, data);
-                }).onError(function (x, data) {
+                .after(function (data) {
+                  if (fn) {
+                      if (data != null) {
+                          Object.copy(data, _this);
+                      }
+                      fn.call(_this, data);
+                  }
+                }).onError(function (status, data) {
                     if (err) {
-                        err.call(_this, x.status, data);
+                        err.call(_this, status, data);
                     }
                 });
         }
@@ -32,7 +34,7 @@ $cheeta.api = function (config){
             });
         };
         this.$xhr = function (newXHR) {
-            return newXHR ? newXHR() : new $cheeta.XHR();
+            return newXHR ? newXHR() : new $cheeta.http();
         };
         this.$create = function (fn, err) {
             callXHR('POST', null, fn, err);
@@ -73,10 +75,10 @@ $cheeta.api = function (config){
 
         var sample = params || params instanceof ResourceClass ? params : new ResourceClass();
 
-        var isStringDataPath = dataPath && $cheeta.isString(dataPath);
+        var isStringDataPath = dataPath && Object.isString(dataPath);
 
         sample.$xhr().open('GET', $cheeta.url(sample.$resolveUrl(config.url)).params(params).toString(),
-            config.async || true).send().after(function (x, data) {
+            config.async || true).send().after(function (data) {
                 if (after) {
                     if (dataPath == null) {
                     } else if (isStringDataPath) {
@@ -86,13 +88,13 @@ $cheeta.api = function (config){
                         }
                     }
                     for (var i = 0; i < data.length; i++) {
-                        resp[i] = new ResourceClass(data[i]);
+                        resp.push(new ResourceClass(data[i]));
                     }
                     after.call(this, data, resp);
                 }
-            }).onError(function (x, data) {
+            }).onError(function (status, data) {
                 if (err) {
-                    err.call(this, x.status, data);
+                    err.call(this, status, data);
                 }
             });
         return resp;

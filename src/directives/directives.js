@@ -67,7 +67,7 @@ $cheeta.directive({
 $cheeta.directive({
 	name: 'show',
 	isTemplate: true,
-	link: function (elem, attr, modelRefs) {
+	link: function (elem, attr, allAttr, modelRefs) {
 		attr.watch(function (val) {
 			if (val) {
 				elem.style.display = '';
@@ -129,12 +129,12 @@ $cheeta.directive({
 		var modelDef = attr.value.split(/ *[,;] */g);
 		var models = {};
 
-		function makeWatch(m, ref) {
-			return function() {
-				m.value = attr.evaluate({}, ref);
-				m.valueChange();
-			};
-		}
+		//function makeWatch(m, ref) {
+		//	return function() {
+		//		m.value = attr.evaluate({}, ref);
+		//		m.valueChange();
+		//	};
+		//}
 
 		for (var i = 0; i < modelDef.length; i++) {
 			if (modelDef[i] === '') continue;
@@ -142,18 +142,18 @@ $cheeta.directive({
 			var split = modelDef[i].split(/ *: */g);
 			var ref = split[1] || split[0];
 			var as = split.length > 1 ? split[0] : null;
-			if (as) {
-				var m = new $cheeta.Model(as, null);
-				m.refId = this.lastId++;
-				m.value = attr.evaluate({}, ref);
-				attr.watch(makeWatch(m, ref), ref);
-				models[as] = m;
-				models.$$last$$ = m;
-			} else {
-				var model = $cheeta.model(ref, modelRefs);
-				models[model.names[0]] = model;
+			//if (as) {
+				//var m = new $cheeta.Model(as, null);
+				//m.refId = this.lastId++;
+				//m.value = attr.evaluate({}, ref);
+				//attr.watch(makeWatch(m, ref), ref);
+				//models[as] = m;
+				//models.$$last$$ = m;
+			//} else {
+			var model = attr.models(ref, modelRefs)[0];
+				models[as || model.names[0]] = model;
 				models.$$last$$ = model;
-			}
+			//}
 //			eval(model.ref() + '=' + model.ref() + '|{}');
 		}
 		return models;

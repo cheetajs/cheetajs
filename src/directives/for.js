@@ -8,7 +8,7 @@ $cheeta.directive({
 		elem.addAfter(refElem);
 		var array = this.parse(attr.value);
 		elem.removeAttr('for.');
-		var model = $cheeta.model(array.ref, modelRefs);
+		var model = attr.models(array.ref, modelRefs)[0];
 		elem.attr('model.', array.variable + ':<M>;' + (elem.attr('model.') || ''));
 
 		function watchFn(val, oldVal) {
