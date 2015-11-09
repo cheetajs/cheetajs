@@ -1,9 +1,16 @@
 $cheeta.directive({
 	name: 'watch*',
 	link: function(elem, attr) {
-		attr.watch(function() {
-			eval(elem.attr('onwatch'));
-		});
+		function makeEval(fn) {
+			return function() {
+				attr.evaluate(null, fn);
+			};
+		}
+		var split = attr.value.split(';'), len = split.length;
+		while (len--) {
+			var modelFn = split[len].split(':');
+			attr.watch(makeEval(modelFn[1]), modelFn[0]);
+		}
 	}
 });
 $cheeta.directive({
@@ -21,8 +28,9 @@ $cheeta.directive({
 $cheeta.directive({
 	name: 'bind',
 	order: 800,
-	link: function (elem, attr) {
-		$cheeta.directives.get('value')[0].directive.link(elem, attr);
+	link: function (elem, attr, allAttr) {
+		var split = attr.value.split(':');
+		$cheeta.directives.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
 		function elemValue() {
 			if (elem.type && elem.type.toLowerCase() === 'checkbox') {
 				return elem.checked;
@@ -39,9 +47,12 @@ $cheeta.directive({
 				for(var i = 0; i < models.length; i++) {
 					models[i].setValue(elemValue());
 				}
+				if (split.length > 1) {
+					attr.evaluate(split[1]);
+				}
 			});
 		}
-		listen(attr.models());
+		listen(attr.models(split[0]));
 	}
 });
 $cheeta.directive({

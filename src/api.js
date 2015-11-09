@@ -11,7 +11,7 @@ $cheeta.resource = function (config){
         var _this = this;
 
         function callXHR(method, obj, fn, err) {
-            _this.$xhr().open(method, _this.$resolveUrl(), config.async || true).send(obj)
+            _this.$xhr().open(method, _this.$resolveUrl(), config.async || true).send(obj ? JSON.stringify(obj) : obj)
                 .after(function (data) {
                   if (fn) {
                       if (data != null) {
@@ -37,11 +37,11 @@ $cheeta.resource = function (config){
             return newXHR ? newXHR() : new $cheeta.http();
         };
         this.$create = function (fn, err) {
-            callXHR('POST', null, fn, err);
+            callXHR('POST', this, fn, err);
             return this;
         };
         this.$post = function (fn, err) {
-            callXHR('POST', this, fn, err);
+            callXHR('POST', null, fn, err);
             return this;
         };
         this.$put = this.$update = function (fn, err) {

@@ -17,6 +17,7 @@ $cheeta.url = function(url) {
 	};
 	return parser;
 };
+
 $cheeta.http = function(target) {
 	target = target || this;
 	var xhr = new XMLHttpRequest();
@@ -26,21 +27,6 @@ $cheeta.http = function(target) {
 	xhr.open = function() {
 		origOpen.apply(xhr, arguments);
 		return xhr;
-	};
-	xhr.get = function() {
-		return xhr.open.apply(xhr, ['GET'].concat(Array.prototype.slice.call(arguments)));
-	};
-	xhr.post = function() {
-		return xhr.open.apply(xhr, ['POST'].concat(Array.prototype.slice.call(arguments)));
-	};
-	xhr.put = function() {
-		return xhr.open.apply(xhr, ['PUT'].concat(Array.prototype.slice.call(arguments)));
-	};
-	xhr.delete = function() {
-		return xhr.open.apply(xhr, ['DELETE'].concat(Array.prototype.slice.call(arguments)));
-	};
-	xhr.options = function() {
-		return xhr.open.apply(xhr, ['OPTIONS'].concat(Array.prototype.slice.call(arguments)));
 	};
 	xhr.send = function() {
 		origSend.apply(xhr, arguments);
@@ -130,15 +116,34 @@ $cheeta.http = function(target) {
 	Object.defineProperty(xhr, 'data', {
 		get: function() {
 			var type = xhr.getResponseHeader('Content-Type');
-			return type != null && type.indexOf('application/json') > -1 &&
-					xhr.responseText != null && xhr.responseText.length ?
-				JSON.parse(xhr.responseText) : xhr.responseText;
+			try {
+				return type != null && type.indexOf('application/json') > -1 &&
+				xhr.responseText != null && xhr.responseText.length ?
+					JSON.parse(xhr.responseText) : xhr.responseText;
+			} catch(e) {
+				return xhr.responseText;
+			}
 		},
 		enumerable: true,
 		configurable: true
 	});
 
 	return xhr;
+};
+$cheeta.http.get = function() {
+	return $cheeta.http().open.apply($cheeta.http(), ['GET'].concat(Array.prototype.slice.call(arguments)));
+};
+$cheeta.http.post = function() {
+	return $cheeta.http().open.apply($cheeta.http(), ['POST'].concat(Array.prototype.slice.call(arguments)));
+};
+$cheeta.http.put = function() {
+	return $cheeta.http().open.apply($cheeta.http(), ['PUT'].concat(Array.prototype.slice.call(arguments)));
+};
+$cheeta.http.delete = function() {
+	return $cheeta.http().open.apply($cheeta.http(), ['DELETE'].concat(Array.prototype.slice.call(arguments)));
+};
+$cheeta.http.options = function() {
+	return $cheeta.http().open.apply($cheeta.http(), ['OPTIONS'].concat(Array.prototype.slice.call(arguments)));
 };
 
 $cheeta.http.successCallbacks = []; $cheeta.http.completeCallbacks = []; $cheeta.http.errorCallbacks = [];

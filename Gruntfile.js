@@ -1,5 +1,4 @@
 module.exports = function(grunt) {
-  grunt.option('color', false);
   require('load-grunt-tasks')(grunt);
 
   // Project configuration.

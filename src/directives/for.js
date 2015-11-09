@@ -41,6 +41,7 @@ $cheeta.directive({
 				}
 			}
 		}
+		watchFn([], null);
 		model.watch(elem, watchFn);
 		if (model.value != null) {
 			watchFn(model.value, null);

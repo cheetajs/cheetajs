@@ -70,7 +70,7 @@ $cheeta.directives = {
       if (c === '.') {
         return false;
       }
-      if (c.toUpperCase() === c || c === '$' || c === '_' || name === 'window') {
+      if (c.toUpperCase() === c || c === '$' || c === '_' || name === 'window' || name === 'document') {
         return true;
       }
       var i = ref.indexOf('.');
@@ -79,7 +79,7 @@ $cheeta.directives = {
     }
 
     function functionPos(ref) {
-      // handle a[1.2]
+      // TODO handle a[1.2]
       return ref.search(/\( *$/) > -1 ?
         Math.max(ref.lastIndexOf('.'), ref.lastIndexOf('[')) : ref.length;
     }
@@ -106,14 +106,30 @@ $cheeta.directives = {
           var index = functionPos(match.substring(0, bracketIndex));
           var append = match.substring(index);
           var mRef = match.substring(0, index);
+          var model = $cheeta.model.root;
+          var split = mRef.split(/ *\. *| *\[ *| *\] */g);
           if (match.indexOf('.') === 0) {
-            mRef = (modelRefs.$$last$$ || $cheeta.model.root).names[0] + mRef;
+            if (modelRefs.$$last$$) {
+              model = modelRefs.$$last$$;
+            }
+          } else {
+            if (modelRefs[split[0]]  != null) {
+              model = modelRefs[split[0]];
+              split = split.slice(1);
+            }
           }
-          var model = $cheeta.model(mRef, modelRefs);
-          if (model != null) {
+          if (model instanceof $cheeta.Model) {
+            for (var i = 0; i < split.length; i++) {
+              var name = split[i];
+              if (name.length) {
+                model = model.child(name);
+              }
+            }
             result.models.push(model);
+            return model.ref() + append;
+          } else {
+            return model;
           }
-          return model instanceof $cheeta.Model ? model.ref() + append : model;
         }
       }
     });
@@ -123,7 +139,7 @@ $cheeta.directives = {
   modelAttr: function (elem, modelRefs) {
     return function (attr) {
       if (Object.isString(attr)) {
-        attr = elem.attributes[name];
+        attr = {name: attr, value: elem.attr(attr)};
       }
       if (attr == null) {
         return {
@@ -160,14 +176,18 @@ $cheeta.directives = {
           };
         }
 
-        var models = attr.models(ref);
+        var models = attr.models(ref), callback;
         for (var i = 0; i < models.length; i++) {
           var m = models[i];
           if (m instanceof $cheeta.Model) {
-            var callback = makeCallback(m, attr.values);
+            callback = makeCallback(m, attr.values);
             m.watch(elem, callback);
-            callback(m, attr.values);
           }
+        }
+        if (callback) {
+          setTimeout(function () {
+            callback(m, attr.values);
+          }, 1);
         }
       };
 
@@ -207,7 +227,6 @@ $cheeta.directives = {
         var paramValues = keys.map(function (k) {
           return params[k];
         });
-        console.log('eval', resolvedRef, paramValues);
         try {
           return fn.apply(elem, paramValues);
         } catch (e) {

@@ -81,7 +81,6 @@ $cheeta.Model = function(name, parent) {
 		}
 	};
 	this.interceptProp = function(value, name, skipDefine) {
-		console.log('intercepting', value, name, skipDefine);
 		if (value != null) {
 			var model = this;
 			var beforeValue = value[name];
@@ -142,7 +141,7 @@ $cheeta.Model = function(name, parent) {
 	};
 };
 $cheeta.model = function(ref, modelRefs) {
-	if (ref == null) {
+	if (!ref) {
 		return $cheeta.model.root;
 	}
 	if (modelRefs[ref] !== undefined) {
@@ -150,12 +149,6 @@ $cheeta.model = function(ref, modelRefs) {
 	}
 
 	ref = ref.trim();
-
-	var c = ref.charAt(0);
-	if (c.toUpperCase() === c || c === '$' || c === '_') {
-		//return $cheeta.model.root.parent.child(ref);
-		return null;
-	}
 
 	var split = ref.split(/ *\. *| *\[ */g);
 	var parentModel = modelRefs[split[0]] || $cheeta.model.root;
@@ -250,11 +243,10 @@ $cheeta.watchFns = [];
 $cheeta.watch = function(modelExpr, fn) {
 	$cheeta.watchFns.push(fn);
 	var elem = document.createElement('div');
-	elem.setAttribute('style', 'display:none');
-	elem.setAttribute('watch.', modelExpr);
-	elem.setAttribute('onwatch.', '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
+	elem.setAttribute('style', 'display:none !important');
+	elem.setAttribute('watch.', modelExpr + ':' + '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
 	document.body.appendChild(elem);
-	$cheeta.compiler.compile([$cheeta.model.root], elem);
+	$cheeta.compiler.compile(elem, [$cheeta.model.root]);
 };
 
 $cheeta.future = function(future, delay) {

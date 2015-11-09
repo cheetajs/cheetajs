@@ -18,7 +18,7 @@
 			return this;
 		} else {
 			return this.getAttribute(n) || this.getAttribute('data-' + n) ||
-				(n.indexOf('.', n.length - 1) > -1 &&this.getAttribute(n.substring(n.length - 1)));
+				(n.indexOf('.', n.length - 1) === -1 && this.attr(n + '.'));
 		}
 	})(Element);
 	extend('removeAttr', function (n) {
