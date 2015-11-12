@@ -53,7 +53,6 @@
 		} else {
 			this.insertBefore(e, index && this.childNodes[index]);
 		}
-		e.remove();
 		return this;
 	})(Element);
 	extend('addBefore', function (e) {
@@ -132,6 +131,7 @@
 				this.addEventListener(split[i], fn, false);
 			}
 		}
+		return fn;
 	})(Element, window, document);
 
 	extend('off', function(events, fn) {

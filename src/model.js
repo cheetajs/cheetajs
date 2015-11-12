@@ -33,6 +33,7 @@ $cheeta.Model = function(name, parent) {
 		}
 	};
 	this.child = function (name, skip) {
+		name = name.trim ? name.trim() : name;
 		if (this.value == null) {
 			this.value = this.isArray ? [] : {};
 		}

@@ -184,11 +184,12 @@ $cheeta.directives = {
             m.watch(elem, callback);
           }
         }
-        if (callback) {
-          setTimeout(function () {
-            callback(m, attr.values);
-          }, 1);
+        if (!callback) {
+          callback = makeCallback(null, attr.values);
         }
+        setTimeout(function () {
+          callback();
+        }, 1);
       };
 
       attr.evaluate = function (additionalModelRefs, ref) {

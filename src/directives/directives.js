@@ -122,7 +122,10 @@ $cheeta.directive({
 	link: function (elem, attr) {
 		attr.watch(function (val) {
 			var baseAttrName = attr.key;
-			if (val == null) {
+			if ((baseAttrName === 'disabled' || baseAttrName === 'multiple' || baseAttrName === 'required') &&
+					val === false) {
+				elem.removeAttribute(baseAttrName);
+			} else if (val == null) {
 				elem.removeAttribute(baseAttrName);
 			} else {
 				elem.setAttribute(baseAttrName, val);
