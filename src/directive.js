@@ -59,8 +59,8 @@ $cheeta.directives = {
     'throw|catch|final|native|throws|char|finally|new|transient|class|float|null|true|const|for|package|try|continue|function|private|typeof|debugger|goto|' +
     'protected|var|default|if|public|void|delete|implements|return|volatile|do|import|short|while|double|in|static|with')
       .split('|').forEach(function (r) {
-        map[r] = true;
-      });
+      map[r] = true;
+    });
     return map;
   })(),
   reservedWordsRegExp: new RegExp('(^|\\W)(' + this.reservedWords + ')(\\W|$)', 'g'),
@@ -104,16 +104,16 @@ $cheeta.directives = {
           return match;
         } else {
           var index = functionPos(match.substring(0, bracketIndex));
-          var append = match.substring(index);
+          var append = match.substring(index).trim();
           var mRef = match.substring(0, index);
-          var model = $cheeta.model.root;
+          var model = $cheeta.Model.root;
           var split = mRef.split(/ *\. *| *\[ *| *\] */g);
           if (match.indexOf('.') === 0) {
             if (modelRefs.$$last$$) {
               model = modelRefs.$$last$$;
             }
           } else {
-            if (modelRefs[split[0]]  != null) {
+            if (modelRefs[split[0]] != null) {
               model = modelRefs[split[0]];
               split = split.slice(1);
             }
@@ -126,13 +126,20 @@ $cheeta.directives = {
               }
             }
             result.models.push(model);
-            return model.ref() + append;
+            return model.ref() + (!append.length || append.charAt(0) === '.' ? append : '.' + append.trim());
           } else {
             return model;
           }
         }
       }
     });
+
+    if (result.models.length === 1) {
+      result.model = result.models[0];
+    } else {
+      result.model = $cheeta.Model.root.child(ref, false, result.ref);
+      result.isMultiModel = true;
+    }
 
     return result;
   },
@@ -158,20 +165,24 @@ $cheeta.directives = {
         if (!attr.parseResult[parseRef]) {
           attr.parseResult[parseRef] = $cheeta.directives.parse(
             parseRef, mRefs || modelRefs);
+          if (attr.parseResult[parseRef].isMultiModel) {
+            $cheeta.future(function() {$cheeta.Model.root[ref] = attr.evaluate(ref);});
+          }
         }
         return attr.parseResult[parseRef];
       };
       attr.models = function (ref, mRefs) {
         return attr.resolve(ref, mRefs).models;
       };
-
-
+      attr.model = function (ref, mRefs) {
+        return attr.resolve(ref, mRefs).model;
+      };
       attr.values = {};
       attr.watch = function (fn, ref) {
         function makeCallback(model, values) {
           return function () {
             values.oldVal = values.val;
-            values.val = attr.evaluate({}, ref);
+            values.val = attr.evaluate(ref, {});
             fn.call(model, values.val, values.oldVal);
           };
         }
@@ -179,7 +190,7 @@ $cheeta.directives = {
         var models = attr.models(ref), callback;
         for (var i = 0; i < models.length; i++) {
           var m = models[i];
-          if (m instanceof $cheeta.Model) {
+          if (m instanceof $cheeta.Model && m !== $cheeta.Model.root) {
             callback = makeCallback(m, attr.values);
             m.watch(elem, callback);
           }
@@ -192,7 +203,7 @@ $cheeta.directives = {
         }, 1);
       };
 
-      attr.evaluate = function (additionalModelRefs, ref) {
+      attr.evaluate = function (ref, additionalModelRefs) {
         function addModelParams(params) {
           params = params || {};
           var key;
@@ -207,13 +218,13 @@ $cheeta.directives = {
               params[key] = m instanceof $cheeta.Model ? m.getValue() : m;
             }
           }
-          //var rootVal = $cheeta.model.root.value;
+          //var rootVal = $cheeta.Model.root.value;
           //for (key in rootVal) {
           //	if (params[key] === undefined && rootVal.hasOwnProperty(key)) {
           //		params[key] = rootVal[key];
           //	}
           //}
-          params[$cheeta.model.root.names[0]] = $cheeta.model.root.value;
+          params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.value;
           return params;
         }
 

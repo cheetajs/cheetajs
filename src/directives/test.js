@@ -14,7 +14,7 @@ $cheeta.directive({
             els.forEach(function(el, i) {$elem[i] = el;});
             if ($elem) {
                 try {
-                    var val = attr.evaluate({$elem: $elem, Is: _this.Is});
+                    var val = attr.evaluate(null, {$elem: $elem, Is: _this.Is});
                     if (val === false || (val != null && val.length)) {
                         _this.showError(elem, attr, val);
                     }

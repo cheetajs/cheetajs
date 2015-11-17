@@ -6,33 +6,19 @@ $cheeta.directive({
 	link: function (elem, attr, all, modelRefs) {
 		var refElem = document.createComment(elem.outerHTML);
 		elem.addAfter(refElem);
-		var array = this.parse(attr.value);
+		var parsed = this.parse(attr.value);
 		elem.removeAttr('for.');
-		var model = attr.models(array.ref, modelRefs)[0];
-		elem.attr('model.', array.variable + ':<M>;' + (elem.attr('model.') || ''));
+		elem.attr('model.', parsed.variable + ':<M>;' + (elem.attr('model.') || ''));
 
-		function watchFn(val, oldVal) {
-			if (elem.parent() != null) {
-				elem.remove();
-				oldVal = 0;
-				if (Object.isArray(val)) {
-					model.child('length').watch(elem, repeatElements);
-					val = val.length;
-					repeatElements(val, oldVal);
-					return;
-				}
-			}
-			repeatElements(val, oldVal, true);
-		}
 		function repeatElements(val, oldVal, isRange) {
 			var i;
 			if (val > oldVal) {
 				for (i = oldVal; i < val; i++) {
 					var el = elem.cloneNode(true);
 					el.attr('model.', el.attr('model.').replace('<M>',
-						isRange ? i + 1 : array.ref + '[' + i + ']' ));
+						isRange ? i + 1 : parsed.ref + '[' + i + ']' ));
 					refElem.addBefore(el);
-					if (array.index) {modelRefs[array.index] = i;}
+					if (parsed.index) {modelRefs[parsed.index] = i;}
 					$cheeta.compiler.compile(el, modelRefs);
 				}
 			} else if (val < oldVal) {
@@ -41,11 +27,17 @@ $cheeta.directive({
 				}
 			}
 		}
-		watchFn([], null);
-		model.watch(elem, watchFn);
-		if (model.value != null) {
-			watchFn(model.value, null);
-		}
+
+		var oldLen;
+		attr.watch(function (m, val) {
+			if (elem.parent() != null) {
+				elem.remove();
+			}
+			var isRange = !isNaN(val);
+			var len = isRange ? val : (val ? val.length : 0);
+			repeatElements(len, oldLen, isRange);
+			oldLen = len;
+		}, parsed.ref);
 	},
 	parse : function(val) {
 		var split = val.split(/ *: */g);

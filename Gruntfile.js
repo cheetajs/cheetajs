@@ -8,7 +8,7 @@ module.exports = function(grunt) {
     	build: {
     		src: ['src/lang.js', 'src/dom.js', 'src/model.js', 'src/directive.js', 'src/compiler.js',
     		        'src/http.js', 'src/api.js', 'src/interceptor.js',
-    		        'src/directives/*.js', 'src/hash.js'],
+    		        'src/directives/*.js', 'src/hash.js', 'src/filters.js'],
     		dest: 'dist/<%= pkg.name %>.js'
     	}
     },
