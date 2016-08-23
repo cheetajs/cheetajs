@@ -186,6 +186,11 @@ $cheeta.Model = function (name, parent, modelRef) {
         var newLen = this.length;
         arrayChange(newLen, len);
         return result;
+      },
+      sort: function () {
+        var result = Array.prototype.sort.apply(this, arguments);
+        arrayChange(result.length, result.length);
+        return result;
       }
     };
   };
@@ -202,6 +207,7 @@ $cheeta.Model = function (name, parent, modelRef) {
   $cheeta.Model.root = windowModel.child('M');
   $cheeta.Model.root.modelRef = 'M';
   window.M = window.M || {};
+  $cheeta.Model.multiModels = $cheeta.Model.root.child('$$multiModels');
 })();
 
 $cheeta.watchFns = [];

@@ -52,6 +52,7 @@ $cheeta.directives = {
 
     return dirs;
   },
+  jsonRegExp: /\{(.*)\}/g,
   modelVarRegExp: /(((((\. *)?[^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+)|\[ *([^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+|'(\\'|[^'])*') *\]) *)+\(?)|('(\\'|[^'])*')/g,
   reservedWords: (function () {
     var map = [];
@@ -85,7 +86,12 @@ $cheeta.directives = {
     }
 
     var _this = this, result = {models: []};
-    result.ref = ref.replace(this.modelVarRegExp, function (match) {
+    var jsonObjs = [];
+    result.ref = ref.replace(this.jsonRegExp, function (match) {
+      jsonObjs.push(match);
+      return '$J';
+    });
+    result.ref = result.ref.replace(this.modelVarRegExp, function (match) {
       if (match.charAt(0) === '\'' || match.charAt(0) === '"' || match === 'true' || match === 'false' ||
         match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match)) {
         return match;
@@ -134,11 +140,28 @@ $cheeta.directives = {
       }
     });
 
+    var i = 0;
+    result.ref = result.ref.replace(/\$J/, function () {
+      return jsonObjs[i++];
+    });
+
+    if (result.models.length) {
+      var dependents = [];
+      result.models.map(function(m) {
+        m = m.parent;
+        while (m && m !== $cheeta.Model.root) {
+          if (m.dependents) dependents = dependents.concat(m.dependents);
+          m = m.parent;
+        }
+      });
+      result.models = result.models.concat(dependents);
+    }
+
     if (result.models.length === 1) {
       result.model = result.models[0];
-    } else {
-      result.model = $cheeta.Model.root.child(ref, false, result.ref);
-      result.isMultiModel = true;
+    } else if (result.models.length > 1) {
+      result.model = $cheeta.Model.multiModels.child(ref, false, result.ref);
+      result.model.dependents = result.models;
     }
 
     return result;
@@ -163,11 +186,7 @@ $cheeta.directives = {
       attr.resolve = function (ref, mRefs) {
         var parseRef = ref || attr.value;
         if (!attr.parseResult[parseRef]) {
-          attr.parseResult[parseRef] = $cheeta.directives.parse(
-            parseRef, mRefs || modelRefs);
-          if (attr.parseResult[parseRef].isMultiModel) {
-            $cheeta.future(function() {$cheeta.Model.root[ref] = attr.evaluate(ref);});
-          }
+          attr.parseResult[parseRef] = $cheeta.directives.parse(parseRef, mRefs || modelRefs);
         }
         return attr.parseResult[parseRef];
       };
@@ -240,7 +259,8 @@ $cheeta.directives = {
           return params[k];
         });
         try {
-          return fn.apply(elem, paramValues);
+          var val = fn.apply(elem, paramValues);
+          return val;
         } catch (e) {
           if (console.error) {
             console.error(e.constructor.prototype.toString(), e.message || e,

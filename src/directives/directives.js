@@ -156,9 +156,9 @@ $cheeta.directive({
     for (var i = 0; i < modelDef.length; i++) {
       if (modelDef[i] === '') continue;
       //TODO handle app1['123 as 123']
-      var split = modelDef[i].split(/ *: */g);
-      var ref = split[1] || split[0];
-      var as = split.length > 1 ? split[0] : null;
+      var index = modelDef[i].indexOf(':');
+      var ref = (modelDef[i].substring(index + 1) || modelDef[i].substring(0, index)).trim();
+      var as = index > -1 ? modelDef[i].substring(0, index).trim() : null;
       //if (as) {
       //var m = new $cheeta.Model(as, null);
       //m.refId = this.lastId++;

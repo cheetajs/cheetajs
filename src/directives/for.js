@@ -11,6 +11,7 @@ $cheeta.directive({
 		elem.attr('model.', parsed.variable + ':<M>;' + (elem.attr('model.') || ''));
 
 		function repeatElements(val, oldVal, isRange) {
+			oldVal = oldVal || 0;
 			var i;
 			if (val > oldVal) {
 				for (i = oldVal; i < val; i++) {
@@ -29,20 +30,21 @@ $cheeta.directive({
 		}
 
 		var oldLen;
-		attr.watch(function (m, val) {
+		attr.watch(function (val) {
 			if (elem.parent() != null) {
 				elem.remove();
 			}
-			var isRange = !isNaN(val);
+			var isRange = val != null && !isNaN(parseFloat(val));
+			console.log('mmm', val, isRange);
 			var len = isRange ? val : (val ? val.length : 0);
 			repeatElements(len, oldLen, isRange);
 			oldLen = len;
 		}, parsed.ref);
 	},
 	parse : function(val) {
-		var split = val.split(/ *: */g);
-		var ref = split[1];
-		var keys = split[0].split(/ *, */g);
+		var i = val.indexOf(':');
+		var ref = val.substring(i + 1).trim();
+		var keys = val.substring(0, i).trim().split(/ *, */g);
 		return {
 			ref: ref,
 			index: keys.length > 1 ? keys[0] : null,

@@ -22,17 +22,18 @@ $cheeta.directive({
 				return Object.isObject(result) ? result.value : result;
 			}
 		};
+		var keyListenerFn;
 		if (event.indexOf('key') === 0) {
 			var codes = this.extractKeyCodes(keys);
 			if (codes.length) {
-				listenerFn = function (e) {
+				keyListenerFn = function (e) {
 					if (codes.indexOf(e.which) > -1) {
 						listenerFn.call(this, e);
 					}
 				};
 			}
 		}
-		elem.addEventListener(event, listenerFn, false);
+		elem.addEventListener(event, keyListenerFn || listenerFn, false);
 	},
 	extractKeyCodes: function(keys) {
 		var codes = [];

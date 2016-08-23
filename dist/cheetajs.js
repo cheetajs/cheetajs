@@ -415,6 +415,11 @@ $cheeta.Model = function (name, parent, modelRef) {
         var newLen = this.length;
         arrayChange(newLen, len);
         return result;
+      },
+      sort: function () {
+        var result = Array.prototype.sort.apply(this, arguments);
+        arrayChange(result.length, result.length);
+        return result;
       }
     };
   };
@@ -431,6 +436,7 @@ $cheeta.Model = function (name, parent, modelRef) {
   $cheeta.Model.root = windowModel.child('M');
   $cheeta.Model.root.modelRef = 'M';
   window.M = window.M || {};
+  $cheeta.Model.multiModels = $cheeta.Model.root.child('$$multiModels');
 })();
 
 $cheeta.watchFns = [];
@@ -511,6 +517,7 @@ $cheeta.directives = {
 
     return dirs;
   },
+  jsonRegExp: /\{(.*)\}/g,
   modelVarRegExp: /(((((\. *)?[^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+)|\[ *([^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+|'(\\'|[^'])*') *\]) *)+\(?)|('(\\'|[^'])*')/g,
   reservedWords: (function () {
     var map = [];
@@ -544,7 +551,12 @@ $cheeta.directives = {
     }
 
     var _this = this, result = {models: []};
-    result.ref = ref.replace(this.modelVarRegExp, function (match) {
+    var jsonObjs = [];
+    result.ref = ref.replace(this.jsonRegExp, function (match) {
+      jsonObjs.push(match);
+      return '$J';
+    });
+    result.ref = result.ref.replace(this.modelVarRegExp, function (match) {
       if (match.charAt(0) === '\'' || match.charAt(0) === '"' || match === 'true' || match === 'false' ||
         match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match)) {
         return match;
@@ -593,11 +605,28 @@ $cheeta.directives = {
       }
     });
 
+    var i = 0;
+    result.ref = result.ref.replace(/\$J/, function () {
+      return jsonObjs[i++];
+    });
+
+    if (result.models.length) {
+      var dependents = [];
+      result.models.map(function(m) {
+        m = m.parent;
+        while (m && m !== $cheeta.Model.root) {
+          if (m.dependents) dependents = dependents.concat(m.dependents);
+          m = m.parent;
+        }
+      });
+      result.models = result.models.concat(dependents);
+    }
+
     if (result.models.length === 1) {
       result.model = result.models[0];
-    } else {
-      result.model = $cheeta.Model.root.child(ref, false, result.ref);
-      result.isMultiModel = true;
+    } else if (result.models.length > 1) {
+      result.model = $cheeta.Model.multiModels.child(ref, false, result.ref);
+      result.model.dependents = result.models;
     }
 
     return result;
@@ -622,11 +651,7 @@ $cheeta.directives = {
       attr.resolve = function (ref, mRefs) {
         var parseRef = ref || attr.value;
         if (!attr.parseResult[parseRef]) {
-          attr.parseResult[parseRef] = $cheeta.directives.parse(
-            parseRef, mRefs || modelRefs);
-          if (attr.parseResult[parseRef].isMultiModel) {
-            $cheeta.future(function() {$cheeta.Model.root[ref] = attr.evaluate(ref);});
-          }
+          attr.parseResult[parseRef] = $cheeta.directives.parse(parseRef, mRefs || modelRefs);
         }
         return attr.parseResult[parseRef];
       };
@@ -699,7 +724,8 @@ $cheeta.directives = {
           return params[k];
         });
         try {
-          return fn.apply(elem, paramValues);
+          var val = fn.apply(elem, paramValues);
+          return val;
         } catch (e) {
           if (console.error) {
             console.error(e.constructor.prototype.toString(), e.message || e,
@@ -1095,106 +1121,109 @@ $cheeta.http.prototype = new XMLHttpRequest();
 //$cheeta.api = new Service({
 //    url: 'api url like http://mysite.com/api/user/{id}/fans',
 //    method: 'GET|POST|PUT|DELETE',
-$cheeta.resource = function (config){
-    if (Object.isString(config)) {
-        config = {url: config};
-    }
-    var ResourceClass = function (obj) {
-        Object.copy(obj, this);
+$cheeta.resource = function (config) {
+  if (Object.isString(config)) {
+    config = {url: config};
+  }
+  var ResourceClass = function (obj) {
+    Object.copy(obj, this);
 
-        var _this = this;
+    var _this = this;
 
-        function callXHR(method, obj, fn, err) {
-            _this.$xhr().open(method, _this.$resolveUrl(), config.async || true).send(obj ? JSON.stringify(obj) : obj)
-                .after(function (data) {
-                  if (fn) {
-                      if (data != null) {
-                          Object.copy(data, _this);
-                      }
-                      fn.call(_this, data);
-                  }
-                }).onError(function (status, data) {
-                    if (err) {
-                        err.call(_this, status, data);
-                    }
-                });
+    function callXHR(method, obj, fn, err) {
+      _this.$xhr().open(method, _this.$resolveUrl(), config.async || true).send(obj ? JSON.stringify(obj) : obj)
+        .after(function (data) {
+          if (data && Object.isString(data)) {
+            data = JSON.parse(data);
+          }
+          if (fn) {
+            if (data != null) {
+              Object.copy(data, _this);
+            }
+            fn.call(_this, data);
+          }
+        }).onError(function (status, data) {
+        if (err) {
+          err.call(_this, status, data);
         }
+      });
+    }
 
-        this.$resolveUrl = function () {
-            var _this = this;
-            return config.url.replace(/{:(\w+)}/, function (p, m) {
-                var val = _this[m];
-                return val ? val : '';
-            });
-        };
-        this.$xhr = function (newXHR) {
-            return newXHR ? newXHR() : new $cheeta.http();
-        };
-        this.$create = function (fn, err) {
-            callXHR('POST', this, fn, err);
-            return this;
-        };
-        this.$post = function (fn, err) {
-            callXHR('POST', null, fn, err);
-            return this;
-        };
-        this.$put = this.$update = function (fn, err) {
-            callXHR('PUT', this, fn, err);
-            return this;
-        };
-        this.$remove = function (fn, err) {
-            callXHR('DELETE', null, fn, err);
-            return this;
-        };
-        this.$get = function (fn, err) {
-            callXHR('GET', null, fn, err);
-            return this;
-        };
-        this.$query = function (params, dataPath, fn, err) {
-            return ResourceClass.$query(this, dataPath).after(fn).error(err);
-        };
+    this.$resolveUrl = function () {
+      var _this = this;
+      return config.url.replace(/{:(\w+)}/, function (p, m) {
+        var val = _this[m];
+        return val ? val : '';
+      });
+    };
+    this.$xhr = function (newXHR) {
+      return newXHR ? newXHR() : new $cheeta.http();
+    };
+    this.$create = function (fn, err) {
+      callXHR('POST', this, fn, err);
+      return this;
+    };
+    this.$post = function (fn, err) {
+      callXHR('POST', null, fn, err);
+      return this;
+    };
+    this.$put = this.$update = function (fn, err) {
+      callXHR('PUT', this, fn, err);
+      return this;
+    };
+    this.$remove = function (fn, err) {
+      callXHR('DELETE', null, fn, err);
+      return this;
+    };
+    this.$get = function (fn, err) {
+      callXHR('GET', null, fn, err);
+      return this;
+    };
+    this.$query = function (params, dataPath, fn, err) {
+      return ResourceClass.$query(this, dataPath).after(fn).error(err);
+    };
+  };
+
+  ResourceClass.$query = function (params, dataPath) {
+    var resp = [], after, err;
+    resp.after = function (fn) {
+      after = fn;
+      return this;
     };
 
-    ResourceClass.$query = function (params, dataPath) {
-        var resp = [], after, err;
-        resp.after = function (fn) {
-            after = fn;
-            return this;
-        };
-
-        resp.error = function (fn) {
-            err = fn;
-            return this;
-        };
-
-        var sample = params || params instanceof ResourceClass ? params : new ResourceClass();
-
-        var isStringDataPath = dataPath && Object.isString(dataPath);
-
-        sample.$xhr().open('GET', $cheeta.url(sample.$resolveUrl(config.url)).params(params).toString(),
-            config.async || true).send().after(function (data) {
-                if (after) {
-                    if (dataPath == null) {
-                    } else if (isStringDataPath) {
-                        var split = dataPath.split('.');
-                        for (var j = 0; j < split.length; j++) {
-                            data = data[split[j]];
-                        }
-                    }
-                    for (var i = 0; i < data.length; i++) {
-                        resp.push(new ResourceClass(data[i]));
-                    }
-                    after.call(this, data, resp);
-                }
-            }).onError(function (status, data) {
-                if (err) {
-                    err.call(this, status, data);
-                }
-            });
-        return resp;
+    resp.error = function (fn) {
+      err = fn;
+      return this;
     };
 
-    return ResourceClass;
+    var sample = params || params instanceof ResourceClass ? params : new ResourceClass();
+
+    var isStringDataPath = dataPath && Object.isString(dataPath);
+
+    sample.$xhr().open('GET', $cheeta.url(sample.$resolveUrl(config.url)).params(params).toString(),
+      config.async || true).send().after(function (data) {
+      if (after) {
+        if (dataPath == null) {
+        } else if (isStringDataPath) {
+          var split = dataPath.split('.');
+          for (var j = 0; j < split.length; j++) {
+            data = data[split[j]];
+          }
+        }
+        for (var i = 0; i < data.length; i++) {
+          resp.push(new ResourceClass(data[i]));
+        }
+        after.call(this, data, resp);
+      }
+    }).onError(function (status, data) {
+      if (err) {
+        err.call(this, status, data);
+      }
+    });
+    return resp;
+  };
+
+  return ResourceClass;
 };
 //define interceptor framework to easily add interceptor to any object's method like xhr.send()
 $cheeta.directive({
@@ -1355,9 +1384,9 @@ $cheeta.directive({
     for (var i = 0; i < modelDef.length; i++) {
       if (modelDef[i] === '') continue;
       //TODO handle app1['123 as 123']
-      var split = modelDef[i].split(/ *: */g);
-      var ref = split[1] || split[0];
-      var as = split.length > 1 ? split[0] : null;
+      var index = modelDef[i].indexOf(':');
+      var ref = (modelDef[i].substring(index + 1) || modelDef[i].substring(0, index)).trim();
+      var as = index > -1 ? modelDef[i].substring(0, index).trim() : null;
       //if (as) {
       //var m = new $cheeta.Model(as, null);
       //m.refId = this.lastId++;
@@ -1389,6 +1418,7 @@ $cheeta.directive({
 		elem.attr('model.', parsed.variable + ':<M>;' + (elem.attr('model.') || ''));
 
 		function repeatElements(val, oldVal, isRange) {
+			oldVal = oldVal || 0;
 			var i;
 			if (val > oldVal) {
 				for (i = oldVal; i < val; i++) {
@@ -1407,20 +1437,21 @@ $cheeta.directive({
 		}
 
 		var oldLen;
-		attr.watch(function (m, val) {
+		attr.watch(function (val) {
 			if (elem.parent() != null) {
 				elem.remove();
 			}
-			var isRange = !isNaN(val);
+			var isRange = val != null && !isNaN(parseFloat(val));
+			console.log('mmm', val, isRange);
 			var len = isRange ? val : (val ? val.length : 0);
 			repeatElements(len, oldLen, isRange);
 			oldLen = len;
 		}, parsed.ref);
 	},
 	parse : function(val) {
-		var split = val.split(/ *: */g);
-		var ref = split[1];
-		var keys = split[0].split(/ *, */g);
+		var i = val.indexOf(':');
+		var ref = val.substring(i + 1).trim();
+		var keys = val.substring(0, i).trim().split(/ *, */g);
 		return {
 			ref: ref,
 			index: keys.length > 1 ? keys[0] : null,
@@ -1452,17 +1483,18 @@ $cheeta.directive({
 				return Object.isObject(result) ? result.value : result;
 			}
 		};
+		var keyListenerFn;
 		if (event.indexOf('key') === 0) {
 			var codes = this.extractKeyCodes(keys);
 			if (codes.length) {
-				listenerFn = function (e) {
+				keyListenerFn = function (e) {
 					if (codes.indexOf(e.which) > -1) {
 						listenerFn.call(this, e);
 					}
 				};
 			}
 		}
-		elem.addEventListener(event, listenerFn, false);
+		elem.addEventListener(event, keyListenerFn || listenerFn, false);
 	},
 	extractKeyCodes: function(keys) {
 		var codes = [];
@@ -1727,23 +1759,33 @@ $cheeta.route = $cheeta.route || function(map, hashVal) {
 	}
 	return url;
 };
-$cheeta.Model.root.value.filter = function (array, q) {
+$cheeta.Model.root.value.filter = function (array, q, options) {
   function contains(obj, q) {
     if (Object.isString(obj)) {
-      if (obj.indexOf(q) > -1) {
-        return 100;
+      var i = obj.search(q instanceof RegExp ? q : new RegExp(q, options && options.matchCase ? '' : 'i'));
+      if (i > -1) {
+        return (obj.length - i + 1) * 100 / obj.length;
       }
-      var k = 0, i = 0;
+      if (!options || !options.sort) {
+        return -1;
+      }
+      var k = 0;
+      i = 0;
       while (k > -1) {
         k = obj.substring(k).indexOf(q[i++]);
       }
-      return i;
+      return i / obj.length;
     }
     if (Object.isObject(obj)) {
       var sum = 0;
-      for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          sum += contains(obj[key], q);
+      if (options.field || options.fields) {
+        options.fields = options.fields || [options.field];
+        options.fields.map(function (f, i) {
+          sum += contains(obj[f], q, f) * (options.fields.length - i * 100);
+        });
+      } else for (var key in obj) {
+        if (obj.hasOwnProperty(key) && !Object.isFunction(obj[key])) {
+          sum += contains(obj[key], q, key);
         }
       }
       return sum;
@@ -1752,18 +1794,28 @@ $cheeta.Model.root.value.filter = function (array, q) {
     }
   }
 
-  if (array == null || q == null) {
+  function filter() {
+    if (array == null || q == null) {
+      return array;
+    }
+    var result = [];
+    array.forEach(function (item) {
+      var score = options && options.scoreFn ? options.scoreFn(item, q) : contains(item, q);
+      if (score > 0) {
+        result.push({item: item, score: score});
+      }
+    });
+    result.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    return result.map(function (obj) {
+      return obj.item;
+    });
+  }
+  if (q != null && (!Object.isString(q) || q.length)) {
+    return filter();
+  } else {
     return array;
   }
-  var result = [];
-  array.forEach(function (item) {
-    var score = contains(item, q);
-    if (score > 0) {
-      result.push({item: item, score: score});
-    }
-  });
-  result = result.sort(function (a, b) {
-    return b - a;
-  });
-  return result;
+
 };
