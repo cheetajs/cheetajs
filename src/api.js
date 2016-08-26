@@ -11,7 +11,7 @@ $cheeta.resource = function (config) {
     var _this = this;
 
     function callXHR(method, obj, fn, err) {
-      _this.$xhr().open(method, _this.$resolveUrl(), config.async || true).send(obj ? JSON.stringify(obj) : obj)
+      _this.$xhr().open(method, _this.$resolveUrl(), config.async || true).json(obj)
         .after(function (data) {
           if (data && Object.isString(data)) {
             data = JSON.parse(data);

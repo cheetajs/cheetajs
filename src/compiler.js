@@ -15,7 +15,7 @@ $cheeta.compiler = {
               script.appendChild(document.createTextNode(content));
               head.insertBefore(script, head.firstChild);
               head.removeChild(script);
-            } else if (node.type === 'text/cheeta-template') {
+            } else if (node.getAttribute('id')) {
               $cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
             }
           }

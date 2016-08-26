@@ -210,6 +210,7 @@ $cheeta.Model = function (name, parent, modelRef) {
   $cheeta.Model.multiModels = $cheeta.Model.root.child('$$multiModels');
 })();
 
+$cheeta.templates = [];
 $cheeta.watchFns = [];
 $cheeta.watch = function (modelExpr, fn) {
   $cheeta.watchFns.push(fn);
