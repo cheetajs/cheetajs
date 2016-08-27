@@ -344,8 +344,12 @@ $cheeta.Model = function (name, parent, modelRef) {
                   delete prevVal[key];
                   prevVal[key] = pval;
                 }
-                model.children[key].interceptProp(val, key);
-                val[key] = origVal;
+                if (val[key] === undefined) {
+                  delete model.children[key];
+                } else {
+                  model.children[key].interceptProp(val, key);
+                  val[key] = origVal;
+                }
               }
             }
           }
@@ -450,12 +454,72 @@ $cheeta.watch = function (modelExpr, fn) {
   $cheeta.compiler.compile(elem, [$cheeta.Model.root]);
 };
 
-$cheeta.future = function (future, delay) {
-  $cheeta.future.evals.push(delay ? function () {
-    setTimeout(future, delay);
-  } : future);
+$cheeta.Future = function (fn, delay, thisArg) {
+  this.afterFn = null;
+  this.fns = Object.isArray(fn) ? fn : (fn ? [fn] : []);
+  var self = this;
+  this.add = function (fn) {
+    if (fn instanceof $cheeta.Future) {
+      self.fns = self.fns.concat(fn.fns);
+    } else {
+      self.fns.push(fn);
+    }
+  };
+  this.run = function () {
+    if (!self.fns.length) {
+      setTimeout(function () {
+        self.afterFn.call(thisArg);
+      }, 0);
+      return self;
+    }
+    var results = [];
+
+    function futureRun(fn) {
+      return function () {
+        try {
+          results.push(fn.call(thisArg, arguments));
+        } finally {
+          if (results.length === self.fns.length) {
+            self.afterFn.call(thisArg, results.length === 1 ? results[0] : results);
+          }
+        }
+      };
+    }
+
+    for (var i = 0; i < self.fns.length; i++) {
+      setTimeout(futureRun(self.fns[i]), delay || 0);
+    }
+    return self;
+  };
+  this.after = function (fn) {
+    self.afterFn = fn;
+  };
 };
+
+$cheeta.future = function (future, delay) {
+  $cheeta.future.evals.push(delay ? new $cheeta.Future(future, delay) : future);
+};
+
 $cheeta.future.evals = $cheeta.future.evals || [];
+
+$cheeta.runFutures = function (after) {
+  var runs = $cheeta.future.evals;
+  $cheeta.future.evals = [];
+  var futures = new $cheeta.Future();
+  for (var i = 0; i < runs.length; i++) {
+    var expr = runs[i];
+    if (expr instanceof $cheeta.Future) {
+      futures.add(expr);
+    } else if (Object.isFunction(expr)) {
+        expr();
+    } else {
+      eval(expr);
+    }
+  }
+  futures.run().after(function (result) {
+    after(result);
+  });
+};
 
 window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
@@ -683,9 +747,10 @@ $cheeta.directives = {
         if (!callback) {
           callback = makeCallback(null, attr.values);
         }
-        setTimeout(function () {
-          callback();
-        }, 1);
+        $cheeta.future(callback, 1);
+        // setTimeout(function () {
+        //   callback();
+        // }, 1);
       };
 
       attr.evaluate = function (ref, additionalModelRefs) {
@@ -715,6 +780,7 @@ $cheeta.directives = {
 
         var resolvedRef = attr.resolve(ref, modelRefs).ref;
         var params = addModelParams(additionalModelRefs);
+        params.$elem = elem;
         var fn;
         //todo try to define only the vars that are used in this model ref
         //todo have more descriptive error in case script is failing
@@ -826,6 +892,11 @@ new MutationObserver(function (mutations) {
 //			}
 //		}
 //	};
+var elHead = document.getElementsByTagName('head')[0], elStyle = document.createElement('style');
+elStyle.type = 'text/css';
+elHead.appendChild(elStyle);
+elStyle.innerHTML = '.ooo-compiling { visibility: hidden; }';
+
 $cheeta.compiler = {
   recursiveCompile: function (node, modelsRefs, runInlineScripts, skipSiblings, skipNode) {
     if (node) {
@@ -925,8 +996,12 @@ $cheeta.compiler = {
     return directives;
   },
   doCompile: function () {
+    var el = arguments[0];
+    el.addClass('ooo-compiling');
     this.recursiveCompile.apply(this, arguments);
-    this.runFutures();
+    $cheeta.runFutures(function () {
+      el.removeClass('ooo-compiling');
+    });
   },
   compile: function (elem, modelRefs, runInlineScripts) {
     this.doCompile(elem, modelRefs, runInlineScripts, true);
@@ -934,18 +1009,6 @@ $cheeta.compiler = {
   compileChildren: function (elem, modelRefs, runInlineScripts) {
     this.doCompile(elem, modelRefs, runInlineScripts, true, true);
   },
-  runFutures: function () {
-    var runs = $cheeta.future.evals;
-    $cheeta.future.evals = [];
-    for (var i = 0; i < runs.length; i++) {
-      var expr = runs[i];
-      if (Object.isFunction(expr)) {
-        expr();
-      } else {
-        eval(expr);
-      }
-    }
-  }
 };
 $cheeta.url = function(url) {
 	var parser = document.createElement('a');
@@ -1443,7 +1506,6 @@ $cheeta.directive({
 				elem.remove();
 			}
 			var isRange = val != null && !isNaN(parseFloat(val));
-			console.log('mmm', val, isRange);
 			var len = isRange ? val : (val ? val.length : 0);
 			repeatElements(len, oldLen, isRange);
 			oldLen = len;
@@ -1458,6 +1520,34 @@ $cheeta.directive({
 			index: keys.length > 1 ? keys[0] : null,
 			variable: keys[keys.length - 1]
 		};
+	}
+});
+$cheeta.directive({
+	name: 'if',
+	isTemplate: true,
+	order: 50,
+	link: function (elem, attr, all, modelRefs) {
+		var refElem = document.createComment(elem.outerHTML);
+		elem.addAfter(refElem);
+		elem.removeAttr('if.');
+		var addedElem;
+		attr.watch(function(val) {
+			if (elem.parent()) {
+				elem.remove();
+			}
+			if (val) {
+				if (!addedElem) {
+					addedElem = elem.cloneNode(true);
+					refElem.addBefore(addedElem);
+					$cheeta.compiler.compile(addedElem, modelRefs);
+				}
+			} else {
+				if (addedElem) {
+					addedElem.remove();
+					addedElem = null;
+				}
+			}
+		});
 	}
 });
 $cheeta.directive({
@@ -1620,7 +1710,6 @@ $cheeta.directive({
   link: function (elem, attr, all, modelRefs) {
     var dir = this;
     attr.watch(function (val) {
-      console.log('view', elem, elem.compiled);
       elem.compiled = true;
       if (!dir.loadingElements[elem] && val != null) {
         // to avoid infinite loop

@@ -217,9 +217,10 @@ $cheeta.directives = {
         if (!callback) {
           callback = makeCallback(null, attr.values);
         }
-        setTimeout(function () {
-          callback();
-        }, 1);
+        $cheeta.future(callback, 1);
+        // setTimeout(function () {
+        //   callback();
+        // }, 1);
       };
 
       attr.evaluate = function (ref, additionalModelRefs) {
@@ -249,6 +250,7 @@ $cheeta.directives = {
 
         var resolvedRef = attr.resolve(ref, modelRefs).ref;
         var params = addModelParams(additionalModelRefs);
+        params.$elem = elem;
         var fn;
         //todo try to define only the vars that are used in this model ref
         //todo have more descriptive error in case script is failing

@@ -13,7 +13,6 @@ $cheeta.directive({
   link: function (elem, attr, all, modelRefs) {
     var dir = this;
     attr.watch(function (val) {
-      console.log('view', elem, elem.compiled);
       elem.compiled = true;
       if (!dir.loadingElements[elem] && val != null) {
         // to avoid infinite loop

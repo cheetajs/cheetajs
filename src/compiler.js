@@ -1,3 +1,8 @@
+var elHead = document.getElementsByTagName('head')[0], elStyle = document.createElement('style');
+elStyle.type = 'text/css';
+elHead.appendChild(elStyle);
+elStyle.innerHTML = '.ooo-compiling { visibility: hidden; }';
+
 $cheeta.compiler = {
   recursiveCompile: function (node, modelsRefs, runInlineScripts, skipSiblings, skipNode) {
     if (node) {
@@ -97,8 +102,12 @@ $cheeta.compiler = {
     return directives;
   },
   doCompile: function () {
+    var el = arguments[0];
+    el.addClass('ooo-compiling');
     this.recursiveCompile.apply(this, arguments);
-    this.runFutures();
+    $cheeta.runFutures(function () {
+      el.removeClass('ooo-compiling');
+    });
   },
   compile: function (elem, modelRefs, runInlineScripts) {
     this.doCompile(elem, modelRefs, runInlineScripts, true);
@@ -106,16 +115,4 @@ $cheeta.compiler = {
   compileChildren: function (elem, modelRefs, runInlineScripts) {
     this.doCompile(elem, modelRefs, runInlineScripts, true, true);
   },
-  runFutures: function () {
-    var runs = $cheeta.future.evals;
-    $cheeta.future.evals = [];
-    for (var i = 0; i < runs.length; i++) {
-      var expr = runs[i];
-      if (Object.isFunction(expr)) {
-        expr();
-      } else {
-        eval(expr);
-      }
-    }
-  }
 };

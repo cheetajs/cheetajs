@@ -35,7 +35,6 @@ $cheeta.directive({
 				elem.remove();
 			}
 			var isRange = val != null && !isNaN(parseFloat(val));
-			console.log('mmm', val, isRange);
 			var len = isRange ? val : (val ? val.length : 0);
 			repeatElements(len, oldLen, isRange);
 			oldLen = len;
