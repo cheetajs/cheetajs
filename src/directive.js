@@ -244,7 +244,7 @@ $cheeta.directives = {
           //		params[key] = rootVal[key];
           //	}
           //}
-          params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.value;
+          // params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.value;
           return params;
         }
 

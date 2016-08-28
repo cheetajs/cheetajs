@@ -123,9 +123,17 @@ $cheeta.directive({
 $cheeta.directive({
   name: '',
   link: function (elem, attr) {
-    attr.watch(function (val) {
-      var baseAttrName = attr.key;
-      if ((baseAttrName === 'disabled' || baseAttrName === 'multiple' || baseAttrName === 'required') &&
+    var baseAttrName = attr.key;
+    attr.watch(function (val, prevVal) {
+      if (baseAttrName === 'class' || baseAttrName === 'style') {
+        var delimiter = baseAttrName === 'class' ? ' ' : ';';
+        var attrVal = elem.getAttribute(baseAttrName);
+        if (attrVal && prevVal) {
+          elem.setAttribute(baseAttrName, attrVal.replace(prevVal, val));
+        } else {
+          elem.setAttribute(baseAttrName, attrVal + (attrVal ? delimiter : '') + val);
+        }
+      } else if ((baseAttrName === 'disabled' || baseAttrName === 'multiple' || baseAttrName === 'required') &&
         val === false) {
         elem.removeAttribute(baseAttrName);
       } else if (val == null) {

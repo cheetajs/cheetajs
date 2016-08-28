@@ -436,10 +436,8 @@ $cheeta.Model = function (name, parent, modelRef) {
 (function () {
   var windowModel = new $cheeta.Model('');
   windowModel.value = window;
-  //$cheeta.Model.root = $cheeta.Model.root || new $cheeta.Model('M');
-  $cheeta.Model.root = windowModel.child('M');
-  $cheeta.Model.root.modelRef = 'M';
-  window.M = window.M || {};
+  $cheeta.Model.root = windowModel;
+  $cheeta.Model.root.modelRef = 'window';
   $cheeta.Model.multiModels = $cheeta.Model.root.child('$$multiModels');
 })();
 
@@ -774,7 +772,7 @@ $cheeta.directives = {
           //		params[key] = rootVal[key];
           //	}
           //}
-          params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.value;
+          // params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.value;
           return params;
         }
 
@@ -1185,11 +1183,11 @@ $cheeta.http.prototype = new XMLHttpRequest();
 //$cheeta.api = new Service({
 //    url: 'api url like http://mysite.com/api/user/{id}/fans',
 //    method: 'GET|POST|PUT|DELETE',
-$cheeta.resource = function (config) {
+$cheeta.ServerObject = function (config) {
   if (Object.isString(config)) {
     config = {url: config};
   }
-  var ResourceClass = function (obj) {
+  var ServerObject = function (obj) {
     Object.copy(obj, this);
 
     var _this = this;
@@ -1244,11 +1242,11 @@ $cheeta.resource = function (config) {
       return this;
     };
     this.$query = function (params, dataPath, fn, err) {
-      return ResourceClass.$query(this, dataPath).after(fn).error(err);
+      return ServerObject.$query(this, dataPath).after(fn).error(err);
     };
   };
 
-  ResourceClass.$query = function (params, dataPath) {
+  ServerObject.$query = function (params, dataPath) {
     var resp = [], after, err;
     resp.after = function (fn) {
       after = fn;
@@ -1260,7 +1258,7 @@ $cheeta.resource = function (config) {
       return this;
     };
 
-    var sample = params || params instanceof ResourceClass ? params : new ResourceClass();
+    var sample = params || params instanceof ServerObject ? params : new ServerObject();
 
     var isStringDataPath = dataPath && Object.isString(dataPath);
 
@@ -1275,7 +1273,7 @@ $cheeta.resource = function (config) {
           }
         }
         for (var i = 0; i < data.length; i++) {
-          resp.push(new ResourceClass(data[i]));
+          resp.push(new ServerObject(data[i]));
         }
         after.call(this, data, resp);
       }
@@ -1287,7 +1285,7 @@ $cheeta.resource = function (config) {
     return resp;
   };
 
-  return ResourceClass;
+  return ServerObject;
 };
 //define interceptor framework to easily add interceptor to any object's method like xhr.send()
 $cheeta.directive({
@@ -1415,9 +1413,17 @@ $cheeta.directive({
 $cheeta.directive({
   name: '',
   link: function (elem, attr) {
-    attr.watch(function (val) {
-      var baseAttrName = attr.key;
-      if ((baseAttrName === 'disabled' || baseAttrName === 'multiple' || baseAttrName === 'required') &&
+    var baseAttrName = attr.key;
+    attr.watch(function (val, prevVal) {
+      if (baseAttrName === 'class' || baseAttrName === 'style') {
+        var delimiter = baseAttrName === 'class' ? ' ' : ';';
+        var attrVal = elem.getAttribute(baseAttrName);
+        if (attrVal && prevVal) {
+          elem.setAttribute(baseAttrName, attrVal.replace(prevVal, val));
+        } else {
+          elem.setAttribute(baseAttrName, attrVal + (attrVal ? delimiter : '') + val);
+        }
+      } else if ((baseAttrName === 'disabled' || baseAttrName === 'multiple' || baseAttrName === 'required') &&
         val === false) {
         elem.removeAttribute(baseAttrName);
       } else if (val == null) {

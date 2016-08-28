@@ -1,11 +1,11 @@
 //$cheeta.api = new Service({
 //    url: 'api url like http://mysite.com/api/user/{id}/fans',
 //    method: 'GET|POST|PUT|DELETE',
-$cheeta.resource = function (config) {
+$cheeta.ServerObject = function (config) {
   if (Object.isString(config)) {
     config = {url: config};
   }
-  var ResourceClass = function (obj) {
+  var ServerObject = function (obj) {
     Object.copy(obj, this);
 
     var _this = this;
@@ -60,11 +60,11 @@ $cheeta.resource = function (config) {
       return this;
     };
     this.$query = function (params, dataPath, fn, err) {
-      return ResourceClass.$query(this, dataPath).after(fn).error(err);
+      return ServerObject.$query(this, dataPath).after(fn).error(err);
     };
   };
 
-  ResourceClass.$query = function (params, dataPath) {
+  ServerObject.$query = function (params, dataPath) {
     var resp = [], after, err;
     resp.after = function (fn) {
       after = fn;
@@ -76,7 +76,7 @@ $cheeta.resource = function (config) {
       return this;
     };
 
-    var sample = params || params instanceof ResourceClass ? params : new ResourceClass();
+    var sample = params || params instanceof ServerObject ? params : new ServerObject();
 
     var isStringDataPath = dataPath && Object.isString(dataPath);
 
@@ -91,7 +91,7 @@ $cheeta.resource = function (config) {
           }
         }
         for (var i = 0; i < data.length; i++) {
-          resp.push(new ResourceClass(data[i]));
+          resp.push(new ServerObject(data[i]));
         }
         after.call(this, data, resp);
       }
@@ -103,5 +103,5 @@ $cheeta.resource = function (config) {
     return resp;
   };
 
-  return ResourceClass;
+  return ServerObject;
 };

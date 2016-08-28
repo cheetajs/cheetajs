@@ -207,10 +207,8 @@ $cheeta.Model = function (name, parent, modelRef) {
 (function () {
   var windowModel = new $cheeta.Model('');
   windowModel.value = window;
-  //$cheeta.Model.root = $cheeta.Model.root || new $cheeta.Model('M');
-  $cheeta.Model.root = windowModel.child('M');
-  $cheeta.Model.root.modelRef = 'M';
-  window.M = window.M || {};
+  $cheeta.Model.root = windowModel;
+  $cheeta.Model.root.modelRef = 'window';
   $cheeta.Model.multiModels = $cheeta.Model.root.child('$$multiModels');
 })();
 
