@@ -88,7 +88,6 @@ $cheeta.objectModel = {
   objectIdModelMap: {},
   uid: 2,
   arrayMethodNames: ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse'],
-  origArrayMethods: {},
   addValueToModelMap: function (value, model) {
     if (!value.$$cheetaId) {
       value.$$cheetaId = this.uid++;
@@ -108,22 +107,22 @@ $cheeta.objectModel = {
         } else {
           for (var i = 0; i < models.length; i++) {
             var m = models[i].children[propName];
-            if (!m) {
-              models.splice(i--, 1);
-              continue;
+            if (m) {
+              console.log('firing', m.ref());
+              m.valueChange();
+            // } else {
+            //   models.splice(i--, 1);
             }
-            console.log('firing', m.ref());
-            m.valueChange();
           }
         }
       }
     }
   },
-  makeArrayFn: function (model, methodName) {
+  interceptArrayFn: function (model, fn) {
     return function () {
       var oldLen = model.getValue().length;
       try {
-        return model.origArrayMethods[methodName].apply(this, arguments);
+        return fn.apply(this, arguments);
       } finally {
         model.valueChange();
         var newLen = model.getValue().length;
@@ -171,10 +170,9 @@ $cheeta.objectModel = {
                 }
               }
               if (Object.isArray(val)) {
-                for (var i = 0; i < objModel.length; i++) {
+                for (var i = 0; i < objModel.arrayMethodNames.length; i++) {
                   var methodName = objModel.arrayMethodNames[i];
-                  model.origArrayMethods[methodName] = val[methodName];
-                  val[methodName] = objModel.makeArrayFn(model, methodName);
+                  val[methodName] = objModel.interceptArrayFn(model, val[methodName]);
                 }
               }
             }
