@@ -114,5 +114,5 @@ $cheeta.compiler = {
   },
   compileChildren: function (elem, modelRefs, runInlineScripts) {
     this.doCompile(elem, modelRefs, runInlineScripts, true, true);
-  },
+  }
 };

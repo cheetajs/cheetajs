@@ -147,7 +147,7 @@ $cheeta.directives = {
 
     if (result.models.length) {
       var dependents = [];
-      result.models.map(function(m) {
+      result.models.map(function (m) {
         m = m.parent;
         while (m && m !== $cheeta.Model.root) {
           if (m.dependents) dependents = dependents.concat(m.dependents);
@@ -197,6 +197,7 @@ $cheeta.directives = {
         return attr.resolve(ref, mRefs).model;
       };
       attr.values = {};
+      attr.unwatches = [];
       attr.watch = function (fn, ref) {
         function makeCallback(model, values) {
           return function () {
@@ -211,16 +212,13 @@ $cheeta.directives = {
           var m = models[i];
           if (m instanceof $cheeta.Model && m !== $cheeta.Model.root) {
             callback = makeCallback(m, attr.values);
-            m.watch(elem, callback);
+            attr.unwatches.push(m.watch(callback));
           }
         }
         if (!callback) {
           callback = makeCallback(null, attr.values);
         }
         $cheeta.future(callback, 1);
-        // setTimeout(function () {
-        //   callback();
-        // }, 1);
       };
 
       attr.evaluate = function (ref, additionalModelRefs) {
@@ -288,22 +286,47 @@ $cheeta.directive = function (def) {
   def.linkFn = function (elem, attr, modelRefs) {
     var allAttr = $cheeta.directives.modelAttr(elem, modelRefs);
     elem.M = modelRefs;
-    return def.link.call(this, elem, allAttr(attr), allAttr, modelRefs);
+    var thisAttr = allAttr(attr);
+    elem.addEventListener($cheeta.directive.removeEventName, function () {
+      console.log('removed', elem);
+      for (var i = 0; i < attr.unwatches.length; i++) {
+        thisAttr.unwatches[i]();
+      }
+    });
+    elem.hasDirective = true;
+    return def.link.call(this, elem, attr, allAttr, modelRefs);
   };
 
   $cheeta.directives.add(def);
 
   return def;
 };
+$cheeta.directive.removeEventName = 'cheeta-removed';
 
-new MutationObserver(function (mutations) {
-  mutations.forEach(function (mutation) {
-    var nodes = mutation.removedNodes;
-    for (var i = 0; i < nodes.length; i++) {
-      mutation.target.dispatchEvent(new CustomEvent('removed',
-        {'detail': {target: nodes.item(i)}}));
+$cheeta.future(function(){
+  function fireRemove(el, removeSiblings) {
+    if (el) {
+      if (el.hasDirective) {
+        el.dispatchEvent(new CustomEvent($cheeta.directive.removeEventName, {'detail': {target: el}}));
+      }
+      fireRemove(el.firstElementChild, true);
+      if (removeSiblings) fireRemove(el.nextElementSibling, true);
+    }
+  }
+  var whatToObserve = {childList: true, subtree: true};
+  var mutationObserver = new MutationObserver(function(mutationRecords) {
+    for (var i = 0; i < mutationRecords.length; i++) {
+      var mutationRecord = mutationRecords[i];
+      if (mutationRecord.type === 'childList') {
+        if (mutationRecord.removedNodes.length > 0) {
+          for (var j = 0; j < mutationRecord.removedNodes.length; j++) {
+            fireRemove(mutationRecord.removedNodes[j]);
+          }
+        }
+      }
     }
   });
+  mutationObserver.observe(document.body, whatToObserve);
 });
 //	this.tokenizeAttrVal = function(val, onToken) {
 //		var quote = null, regexpMod = false, index = -1, optionsSplitIndex = val.indexOf(';');

@@ -16,6 +16,7 @@ $cheeta.directive({
 			if (val > oldVal) {
 				for (i = oldVal; i < val; i++) {
 					var el = elem.cloneNode(true);
+					el.removeClass('hidden');
 					el.attr('model.', el.attr('model.').replace('<M>',
 						isRange ? i + 1 : parsed.ref + '[' + i + ']' ));
 					refElem.addBefore(el);
@@ -26,23 +27,15 @@ $cheeta.directive({
 				for (i = val; i < oldVal; i++) {
 					var toBeRemoved = refElem.prev();
 					toBeRemoved.remove();
-					removeAllListeners(toBeRemoved);
+					// attr.fireElemRemoved(toBeRemoved);
 				}
-			}
-		}
-
-		function removeAllListeners(el, removeSiblings) {
-			if (el) {
-				el.dispatchEvent(new CustomEvent('removed', {'detail': {target: el}}));
-				removeAllListeners(el.firstElementChild, true);
-				if (removeSiblings) removeAllListeners(el.nextElementSibling, true);
 			}
 		}
 
 		var oldLen;
 		attr.watch(function (val) {
 			if (elem.parent() != null) {
-				elem.remove();
+				elem.addClass('hidden');
 			}
 			var isRange = val != null && !isNaN(parseFloat(val));
 			var len = isRange ? val : (val ? val.length : 0);

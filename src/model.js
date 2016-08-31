@@ -45,21 +45,25 @@ $cheeta.Model = function (name, parent, modelRef) {
   };
 
   this.valueChange = function () {
-    document.dispatchEvent(new CustomEvent('Oo-model-change-' + this.ref() + (this.refId || ''),
-      {'detail': {value: this.value, prevValue: this.prevValue, target: this}}));
+    for (var i = 0; i < this.listeners.length; i++) {
+      var listener = this.listeners[i];
+      listener.call(this);
+    }
     return this;
   };
-  this.watch = function (elem, callback) {
+  this.watch = function (callback) {
     var model = this;
-    var listener, modelRef = this.ref() + (this.refId || '');
-    document.addEventListener('Oo-model-change-' + modelRef, (listener = function (e) {
-      callback.call(elem, e.detail.value, e.detail.prevValue);
-    }), false);
-    elem.addEventListener('removed', function () {
-      document.removeEventListener('Oo-model-change-' + modelRef, listener);
-      delete model.parent.children[model.names[0]];
-    }, false);
-    this.listeners.push(listener);
+    model.listeners.push(callback);
+    return function() {
+      model.listeners.splice(model.listeners.indexOf(callback), 1);
+      if (!model.listeners.length) {
+        var m = model;
+        while (!Object.keys(m.children).length) {
+          delete m.parent.children[m.names[0]];
+          m = m.parent;
+        }
+      }
+    };
   };
 
   // this.interceptPropProxy = function (value, name, skipDefine) {
@@ -187,10 +191,6 @@ $cheeta.objectModel = {
   }
 };
 
-//$cheeta.refresh = function(modelRef) {
-//	var model = $cheeta.model.createOrGetModel(null, modelRef);
-//	model.valueChange(model.getValue(), null);
-//};
 (function () {
   var windowModel = new $cheeta.Model('');
   windowModel.value = window;

@@ -29,9 +29,11 @@ $cheeta.directive({
 $cheeta.directive({
   name: 'bind',
   order: 800,
-  link: function (elem, attr, allAttr) {
+  link: function (elem, attr, allAttr, modelRefs) {
     var split = attr.value.split(':');
-    $cheeta.directives.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
+    $cheeta.compiler.compileAttr(elem,
+      {name: 'value.', value: split[0].split(',')[0]}, modelRefs);
+    // $cheeta.directives.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
     function elemValue() {
       if (elem.type && elem.type.toLowerCase() === 'checkbox') {
         return elem.checked;

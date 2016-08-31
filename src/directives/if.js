@@ -20,6 +20,7 @@ $cheeta.directive({
 			} else {
 				if (addedElem) {
 					addedElem.remove();
+					// attr.fireElemRemoved(addedElem);
 					addedElem = null;
 				}
 			}

@@ -20,6 +20,17 @@
             <button onclick.=".cars.unshift({name:'aaaa'})">unshift</button>
             <button onclick.=".cars.shift()">shift</button>
         </ul>
+        <ul>
+            <li for.="c: .cars">{{c.name}}
+                <input type="text" bind.="c.name">
+            </li>
+            <button onclick.="sort()">sort</button>
+            <button onclick.="add()">add</button>
+            <button onclick.=".cars.splice(0.1)">clear</button>
+            <button onclick.=".cars.reverse()">reverse</button>
+            <button onclick.=".cars.unshift({name:'aaaa'})">unshift</button>
+            <button onclick.=".cars.shift()">shift</button>
+        </ul>
         <!--<ul>-->
         <!--<li for.="c: .cars2">{{c.name}}-->
             <!--<input type="text" bind.="c.name">-->
