@@ -244,11 +244,14 @@ $cheeta.directives = {
           //		params[key] = rootVal[key];
           //	}
           //}
-          // params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.value;
+          params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.getValue();
           return params;
         }
 
         var resolvedRef = attr.resolve(ref, modelRefs).ref;
+        if ($cheeta.debug) {
+          elem.setAttribute('OO-' + attr.name, resolvedRef);
+        }
         var params = addModelParams(additionalModelRefs);
         params.$elem = elem;
         var fn;

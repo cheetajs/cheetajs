@@ -1,7 +1,7 @@
 var elHead = document.getElementsByTagName('head')[0], elStyle = document.createElement('style');
 elStyle.type = 'text/css';
 elHead.appendChild(elStyle);
-elStyle.innerHTML = '.ooo-compiling { visibility: hidden; }';
+elStyle.innerHTML = '.oo-invisible { visibility: hidden; } .hidden {display: none!important}';
 
 $cheeta.compiler = {
   recursiveCompile: function (node, modelsRefs, runInlineScripts, skipSiblings, skipNode) {
@@ -103,10 +103,10 @@ $cheeta.compiler = {
   },
   doCompile: function () {
     var el = arguments[0];
-    el.addClass('ooo-compiling');
+    el.addClass('oo-invisible');
     this.recursiveCompile.apply(this, arguments);
     $cheeta.runFutures(function () {
-      el.removeClass('ooo-compiling');
+      el.removeClass('oo-invisible');
     });
   },
   compile: function (elem, modelRefs, runInlineScripts) {

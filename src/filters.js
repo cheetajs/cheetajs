@@ -1,4 +1,4 @@
-$cheeta.Model.root.value.filter = function (array, q, options) {
+window.M.filter = function (array, q, options) {
   function contains(obj, q) {
     if (Object.isString(obj)) {
       var i = obj.search(q instanceof RegExp ? q : new RegExp(q, options && options.matchCase ? '' : 'i'));
@@ -51,6 +51,7 @@ $cheeta.Model.root.value.filter = function (array, q, options) {
       return obj.item;
     });
   }
+
   if (q != null && (!Object.isString(q) || q.length)) {
     return filter();
   } else {

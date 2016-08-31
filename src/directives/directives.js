@@ -80,17 +80,12 @@ $cheeta.directive({
 
 $cheeta.directive({
   name: 'show',
-  isTemplate: true,
-  link: function (elem, attr, allAttr, modelRefs) {
+  link: function (elem, attr) {
     attr.watch(function (val) {
       if (val) {
-        elem.style.display = '';
-        if (!elem.getAttribute('OoCompiled')) {
-          elem.setAttribute('OoCompiled', true);
-          $cheeta.compiler.compileChildren(elem, modelRefs);
-        }
+        elem.removeClass('hidden');
       } else {
-        elem.style.display = 'none';
+        elem.addClass('hidden');
       }
     });
   }

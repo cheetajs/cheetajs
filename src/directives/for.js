@@ -24,8 +24,18 @@ $cheeta.directive({
 				}
 			} else if (val < oldVal) {
 				for (i = val; i < oldVal; i++) {
-					refElem.prev().remove();
+					var toBeRemoved = refElem.prev();
+					toBeRemoved.remove();
+					removeAllListeners(toBeRemoved);
 				}
+			}
+		}
+
+		function removeAllListeners(el, removeSiblings) {
+			if (el) {
+				el.dispatchEvent(new CustomEvent('removed', {'detail': {target: el}}));
+				removeAllListeners(el.firstElementChild, true);
+				if (removeSiblings) removeAllListeners(el.nextElementSibling, true);
 			}
 		}
 
