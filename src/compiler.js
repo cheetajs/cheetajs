@@ -1,8 +1,3 @@
-var elHead = document.getElementsByTagName('head')[0], elStyle = document.createElement('style');
-elStyle.type = 'text/css';
-elHead.appendChild(elStyle);
-elStyle.innerHTML = '.oo-invisible { visibility: hidden; } .hidden {display: none!important}';
-
 $cheeta.compiler = {
   recursiveCompile: function (node, modelsRefs, runInlineScripts, skipSiblings, skipNode) {
     if (node) {
@@ -20,12 +15,14 @@ $cheeta.compiler = {
               script.appendChild(document.createTextNode(content));
               head.insertBefore(script, head.firstChild);
               head.removeChild(script);
-            } else if (node.getAttribute('id')) {
+            } else if (node.getAttribute('id') && node.getAttribute('type').indexOf('template') > -1) {
               $cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
+              skip = true;
             }
           }
+          // console.log('compiling node', node);
           var result = this.compileAllDirectives(node, modelsRefs);
-          skip = result.skip;
+          skip = skip || result.skip;
           modelsRefs = result.refs;
         } else if (node.nodeType === 3) {
           var txt = node.textContent;

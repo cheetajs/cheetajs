@@ -7,8 +7,9 @@
     <div>
         <input type="text" bind.=".name" id="value">
         Name: <span text.=".name"></span>
+        <input type="text" bind.=".props.eye">
+        Eye: <span text.=".props.eye"></span>
         {{.props.eye}}
-        {{.props.cars}}
         <ul>
             <li for.="c: .cars">{{c.name}}
                 <input type="text" bind.="c.name">
@@ -45,7 +46,7 @@
             M.person = {};
             M.person.name = 'Danial';
             M.person.props = {eye:'red', hair:'blue'};
-            M.person.cars = [{name:'Porche'}, {name:'Ferrari'}, {name:'Tesla'}]
+            M.person.cars = [{name:'Porche'}, {name:'Ferrari'}, /*{name:'Tesla'}*/]
             M.person.cars2 = M.person.cars
             M.sort = function() {
                 M.person.cars.sort(function(a,b){return a.name<b.name ? -1 : 1})

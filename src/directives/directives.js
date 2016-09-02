@@ -1,3 +1,4 @@
+document.addCssStyle('.oo-invisible { visibility: hidden; } .hidden {display: none!important}');
 $cheeta.directive({
   name: 'watch*',
   link: function (elem, attr) {
@@ -88,6 +89,25 @@ $cheeta.directive({
         elem.removeClass('hidden');
       } else {
         elem.addClass('hidden');
+      }
+    });
+  }
+});
+
+$cheeta.directive({
+  name: 'hover', link: function (elem, attr, allAttr, modelRefs) {
+    var over = false;
+    var model = attr.model(attr.value, modelRefs);
+    elem.addEventListener('mouseover', function () {
+      if (!over) {
+        over = true;
+        model.setValue(over);
+      }
+    });
+    elem.addEventListener('mouseleave', function () {
+      if (over) {
+        over = false;
+        model.setValue(over);
       }
     });
   }

@@ -52,120 +52,7 @@ $cheeta.directives = {
 
     return dirs;
   },
-  jsonRegExp: /\{(.*)\}/g,
-  modelVarRegExp: /(((((\. *)?[^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+)|\[ *([^ \.!%-\-/:-?\^\[\]{-~\t\r\n'"]+|'(\\'|[^'])*') *\]) *)+\(?)|('(\\'|[^'])*')/g,
-  reservedWords: (function () {
-    var map = [];
-    ('abstract|else|instanceof|super|boolean|enum|int|switch|break|export|interface|synchronized|byte|extends|let|this|case|false|long|' +
-    'throw|catch|final|native|throws|char|finally|new|transient|class|float|null|true|const|for|package|try|continue|function|private|typeof|debugger|goto|' +
-    'protected|var|default|if|public|void|delete|implements|return|volatile|do|import|short|while|double|in|static|with')
-      .split('|').forEach(function (r) {
-      map[r] = true;
-    });
-    return map;
-  })(),
-  reservedWordsRegExp: new RegExp('(^|\\W)(' + this.reservedWords + ')(\\W|$)', 'g'),
-  parse: function (ref, modelRefs) {
-    function hasReserved(ref) {
-      var c = ref.charAt(0);
-      if (c === '.') {
-        return false;
-      }
-      if (c.toUpperCase() === c || c === '$' || c === '_' || name === 'window' || name === 'document') {
-        return true;
-      }
-      var i = ref.indexOf('.');
-      i = i === -1 ? ref.length : i;
-      return _this.reservedWords[ref.substring(0, i)] != null;
-    }
 
-    function functionPos(ref) {
-      // TODO handle a[1.2]
-      return ref.search(/\( *$/) > -1 ?
-        Math.max(ref.lastIndexOf('.'), ref.lastIndexOf('[')) : ref.length;
-    }
-
-    var _this = this, result = {models: []};
-    var jsonObjs = [];
-    result.ref = ref.replace(this.jsonRegExp, function (match) {
-      jsonObjs.push(match);
-      return '$J';
-    });
-    result.ref = result.ref.replace(this.modelVarRegExp, function (match) {
-      if (match.charAt(0) === '\'' || match.charAt(0) === '"' || match === 'true' || match === 'false' ||
-        match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match)) {
-        return match;
-      } else {
-        var bracketIndex = match.length;
-
-        match = match.replace(/\[ *([^0-9'"].*?)\]/g, function (m, $1, index) {
-          var r = _this.parse($1, modelRefs);
-          result.models = result.models.concat(r.models);
-          if (bracketIndex === match.length && r.models.length) {
-            bracketIndex = index;
-          }
-          return '[' + r.ref + ']';
-        });
-        if (hasReserved(match)) {
-          return match;
-        } else {
-          var index = functionPos(match.substring(0, bracketIndex));
-          var append = match.substring(index).trim();
-          var mRef = match.substring(0, index);
-          var model = $cheeta.Model.root;
-          var split = mRef.split(/ *\. *| *\[ *| *\] */g);
-          if (match.indexOf('.') === 0) {
-            if (modelRefs.$$last$$) {
-              model = modelRefs.$$last$$;
-            }
-          } else {
-            if (modelRefs[split[0]] != null) {
-              model = modelRefs[split[0]];
-              split = split.slice(1);
-            }
-          }
-          if (model instanceof $cheeta.Model) {
-            for (var i = 0; i < split.length; i++) {
-              var name = split[i];
-              if (name.length) {
-                model = model.child(name);
-              }
-            }
-            result.models.push(model);
-            return model.ref() + (!append.length || append.charAt(0) === '.' ? append : '.' + append.trim());
-          } else {
-            return model;
-          }
-        }
-      }
-    });
-
-    var i = 0;
-    result.ref = result.ref.replace(/\$J/, function () {
-      return jsonObjs[i++];
-    });
-
-    if (result.models.length) {
-      var dependents = [];
-      result.models.map(function (m) {
-        m = m.parent;
-        while (m && m !== $cheeta.Model.root) {
-          if (m.dependents) dependents = dependents.concat(m.dependents);
-          m = m.parent;
-        }
-      });
-      result.models = result.models.concat(dependents);
-    }
-
-    if (result.models.length === 1) {
-      result.model = result.models[0];
-    } else if (result.models.length > 1) {
-      result.model = $cheeta.Model.multiModels.child(ref, false, result.ref);
-      result.model.dependents = result.models;
-    }
-
-    return result;
-  },
   modelAttr: function (elem, modelRefs) {
     return function (attr) {
       if (Object.isString(attr)) {
@@ -186,7 +73,7 @@ $cheeta.directives = {
       attr.resolve = function (ref, mRefs) {
         var parseRef = ref || attr.value;
         if (!attr.parseResult[parseRef]) {
-          attr.parseResult[parseRef] = $cheeta.directives.parse(parseRef, mRefs || modelRefs);
+          attr.parseResult[parseRef] = $cheeta.parser.parse(parseRef, mRefs || modelRefs);
         }
         return attr.parseResult[parseRef];
       };
@@ -263,13 +150,15 @@ $cheeta.directives = {
         });
         try {
           var val = fn.apply(elem, paramValues);
+          // console.log(escapedVal + ': ' + val);
           return val;
         } catch (e) {
-          if (console.error) {
-            console.error(e.constructor.prototype.toString(), e.message || e,
-              '"' + resolvedRef + '"', attr, elem, params);
-          }
+          // console[e.message && e.message.indexOf('Cannot read property ') > -1 ? 'warn' : 'error'](
+          console.error(e.constructor.prototype.toString(), e.message || e, attr.name, attr.value, elem);
+              // console.error(e.constructor.prototype.toString(), e.message || e,
+              //   '"' + resolvedRef + '"', attr, elem, params);
           throw e;
+          // return undefined;
         }
       };
 
@@ -288,7 +177,7 @@ $cheeta.directive = function (def) {
     elem.M = modelRefs;
     var thisAttr = allAttr(attr);
     elem.addEventListener($cheeta.directive.removeEventName, function () {
-      console.log('removed', elem);
+      // console.log('removed', elem);
       for (var i = 0; i < attr.unwatches.length; i++) {
         thisAttr.unwatches[i]();
       }
@@ -303,7 +192,7 @@ $cheeta.directive = function (def) {
 };
 $cheeta.directive.removeEventName = 'cheeta-removed';
 
-$cheeta.future(function(){
+$cheeta.future(function () {
   function fireRemove(el, removeSiblings) {
     if (el) {
       if (el.hasDirective) {
@@ -313,8 +202,9 @@ $cheeta.future(function(){
       if (removeSiblings) fireRemove(el.nextElementSibling, true);
     }
   }
+
   var whatToObserve = {childList: true, subtree: true};
-  var mutationObserver = new MutationObserver(function(mutationRecords) {
+  var mutationObserver = new MutationObserver(function (mutationRecords) {
     for (var i = 0; i < mutationRecords.length; i++) {
       var mutationRecord = mutationRecords[i];
       if (mutationRecord.type === 'childList') {

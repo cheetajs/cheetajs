@@ -4,7 +4,7 @@ $cheeta.directive({
   baseURL: window.location.protocol + '//' + window.location.hostname +
   (window.location.port && ':' + window.location.port) + window.location.pathname,
   loadView: function (elem, content, modelRefs) {
-    if (elem.parentElement) {
+    if (!elem.cheetaNotCompiled) {
       elem.innerHTML = content;
       $cheeta.compiler.compileChildren(elem, modelRefs, true);
     }
@@ -24,8 +24,8 @@ $cheeta.directive({
           } else {
             var url = val.indexOf('/') === 0 ? dir.baseURL + val : val;
             $cheeta.http.get(url).send().after(function (data) {
-              dir.loadView(elem, data, modelRefs);
               $cheeta.templates[val] = data;
+              dir.loadView(elem, data, modelRefs);
             });
           }
         } finally {

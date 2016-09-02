@@ -7,13 +7,14 @@ $cheeta.directive({
 		elem.addAfter(refElem);
 		elem.removeAttr('if.');
 		var addedElem;
+		elem.cheetaNotCompiled = true;
+		elem.addClass('hidden');
+
 		attr.watch(function(val) {
-			if (elem.parent()) {
-				elem.remove();
-			}
 			if (val) {
 				if (!addedElem) {
 					addedElem = elem.cloneNode(true);
+					addedElem.removeClass('hidden');
 					refElem.addBefore(addedElem);
 					$cheeta.compiler.compile(addedElem, modelRefs);
 				}

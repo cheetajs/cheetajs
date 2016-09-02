@@ -150,4 +150,11 @@
 			return document.create(o);
 		}
 	};
+
+	document.addCssStyle = function (style) {
+		var elHead = document.getElementsByTagName('head')[0], elStyle = document.createElement('style');
+		elStyle.type = 'text/css';
+		elHead.appendChild(elStyle);
+		elStyle.innerHTML = style;
+	};
 })();

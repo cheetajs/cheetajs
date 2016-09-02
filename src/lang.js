@@ -28,6 +28,13 @@ Object.copy = function(from, to) {
     return to;
 };
 
+Array.prototype.remove = function(item) {
+    var index = this.indexOf(item);
+    if (index > -1) {
+        return this.splice(index, 1);
+    }
+};
+
 //window.Service = function(input, fn, output) {
 //    this.input = input;
 //    this.fn = fn;

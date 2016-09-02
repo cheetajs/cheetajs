@@ -20,10 +20,7 @@ $cheeta.hash = {
 		}
 		var list = this.watchers[key];
 		if (list != null) {
-			var index = list.indexOf(fn);
-			if (index > -1) {
-				list.splice(index, 1);
-			}
+			list.remove(fn);
 		}
 	},
 	notify: function(key, newVal, oldVal) {
