@@ -65,72 +65,83 @@ $cheeta.Attribute.prototype = {
   get key() {
     return this.name.replace(/^data-/, '').replace(/\.$/, '');
   },
-  watch: function (fn, expr) {
-    var attr = this;
+  fixExpr: function (expr) {
     expr = expr || this.value;
     if (expr.startsWith('.') && this.elem.ooScope.__last__) {
       expr = this.elem.ooScope.__last__ + expr;
     }
+    return expr;
+  },
+  watch: function (fn, expr) {
+    var attr = this;
+    expr = this.fixExpr(expr);
+
     var updateFn = function () {
-      fn.call(this, attr.evaluate(expr, updateFn.referredScopes));
+      fn.call(this, attr.evaluate(expr));
     };
-    updateFn.referredScopes = [];
-    $cheeta.parser.parse(expr, function (expr) {
-      var prop = expr.substring(0, expr.search(/[\.\[]/));
-      var scope = attr.findReferredScope(attr.elem.ooScope, prop);
-      updateFn.referredScopes.push(scope);
-      scope.put(expr, updateFn);
-      $cheeta.objectModel.interceptAndListen(scoperefEl.oo.values[prop], this);
+    var shouldUpdate;
+    $cheeta.parser.parse(expr, function (tokens) {
+      if (!tokens.length) return;
+      var scope = attr.findReferredScope(attr.elem.ooScope, tokens[0]);
+      var baseModel = scope.models[tokens[0]];
+      if (baseModel) {
+        var model = scope.models[tokens[0]].makeChildren(tokens);
+        model.addListener(updateFn);
+        if (attr.getModelValue(baseModel, tokens) !== undefined) {
+          shouldUpdate = true;
+        }
+      }
     });
-    // updateFn();
+    if (shouldUpdate) updateFn();
   },
   findReferredScope: function (scope, prop) {
-    return scope ? ((scope.get(prop) && scope) || this.findReferredScope(scope.parent, prop))
+    return scope ? ((scope.models[prop] && scope) || this.findReferredScope(scope.parent, prop))
       : window.ooScope;
   },
-  // valueChanged: function (val, path) {
-  //   var entries = this.elem.ooScope.getPrefixes(path);
-  //   if (entries) {
-  //     for (var i = 0; i < entries.length; i++) {
-  //       var expr = entries[i].key, list = entries[i].value;
-  //       $cheeta.objectModel.interceptAndListen(val, expr, this);
-  //       for (var j = 0; j < list.length; j++) {
-  //         list[j]();
-  //       }
-  //     }
-  //   }
-  // },
-  getExprValue: function (obj, expr) {
-    var split = (expr || this.value).split(/ *\. *| *\[ *| *\] */g);
-    for (var i = 1; i < split.length - 1; i++) {
-      if (obj === undefined) {
-        return;
+  setModelValue: function (value, expr) {
+    var tokens = $cheeta.parser.toTokens(this.fixExpr(expr));
+    var scope = this.findReferredScope(this.elem.ooScope, tokens[0]);
+    var model = scope.models[tokens[0]];
+    this.getModelValue(model, tokens.slice(0, tokens.length - 1), true)[tokens[tokens.length - 1]] = value;
+  },
+  getModelValue: function (model, tokens, evalIfNotFound) {
+    var val = (model && model.value) || (evalIfNotFound && eval(tokens[0]));
+    for (var i = 1; i < tokens.length; i++) {
+      if (!val) {
+        return undefined;
       }
-      obj = obj[split[i]];
+      val = val[tokens[i]];
     }
-    return {val: obj, prop: split[split.length - 1]};
+    return val;
   },
   attr: function (name) {
     return new $cheeta.Attribute(this.elem, name, this.getAttribute(name) || this.getAttribute(name + '.') || this.getAttribute('data-' + name + '.'));
   },
-  evaluate: function (ref, scopes) {
-    var params = {};
-    for (var i = 0; i < scopes.length; i++) {
-      var scope = scopes[i];
-      Object.copy(scope.values, params);
-    }
+  evaluate: function (expr, params) {
+    params = params || {};
+    expr = this.fixExpr(expr || this.value);
+    var attr = this, i = 1;
+    var resolvedExpr = $cheeta.parser.parse(expr, function (tokens) {
+      if (!tokens.length) return false;
+      var scope = attr.findReferredScope(attr.elem.ooScope, tokens[0]);
+      var baseModel = scope.models[tokens[0]];
+      if (!baseModel) return false;
+        var key = '__oo__' + i++;
+      params[key] = attr.getModelValue(baseModel, tokens);
+      return key;
+    });
     var fn;
     //todo try to define only the vars that are used in this model ref
     //todo have more descriptive error in case script is failing
-    var escapedVal = (ref || this.value).replace(/'/g, '\\\'');
+    var escapedExpr = resolvedExpr.replace(/'/g, '\\\'');
     var keys = Object.keys(params);
-    eval('var fn = function(' + keys.join(',') + '){return eval(\'' + escapedVal + '\');};');
+    eval('var fn = function(' + keys.join(',') + '){return eval(\'' + escapedExpr + '\');};');
     var paramValues = keys.map(function (k) {
       return params[k];
     });
     try {
       var val = fn.apply(this.elem, paramValues);
-      // console.log(escapedVal + ': ' + val);
+      // console.log(escapedExpr + ': ' + val);
       return val;
     } catch (e) {
       // console[e.message && e.message.indexOf('Cannot read property ') > -1 ? 'warn' : 'error'](

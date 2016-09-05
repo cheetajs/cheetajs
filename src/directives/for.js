@@ -1,9 +1,10 @@
 // for maps you can do for.="key: Object.keys(obj)"
+// for range for.="index : n" will repeat n times
 $cheeta.directive.add({
   name: 'for',
   isTemplate: true,
   order: 100,
-  link: function (elem, attr, all, modelRefs) {
+  link: function (elem, attr) {
     var refElem = document.createComment(elem.outerHTML);
     elem.addAfter(refElem);
     var parsed = this.parse(attr.value);
@@ -23,9 +24,10 @@ $cheeta.directive.add({
             isRange ? i + 1 : parsed.ref + '[' + i + ']'));
           refElem.addBefore(el);
           if (parsed.index) {
-            modelRefs[parsed.index] = i;
+            el.ooScope.models[parsed.index] = i;
           }
-          $cheeta.compiler.compile(el, modelRefs);
+          el.ooScope = elem.ooScope;
+          $cheeta.compiler.compile(el);
         }
       } else if (val < oldVal) {
         for (i = val; i < oldVal; i++) {
@@ -43,6 +45,10 @@ $cheeta.directive.add({
       repeatElements(len, oldLen, isRange);
       oldLen = len;
     }, parsed.ref);
+    attr.watch(function (val) {
+      repeatElements(val, oldLen, false);
+      oldLen = val;
+    }, parsed.ref + '.length');
   },
   parse: function (val) {
     var i = val.indexOf(':');

@@ -5,33 +5,33 @@
 </head>
 <body model.="person: M.person">
     <div>
-        <input type="text" bind.="person.name" id="value">
-        Name: <span text.="person.name"></span>
+        <input type="text" bind.=".name" id="value">
+        Name: <span text.=".name"></span>
         <input type="text" bind.="person.props.eye">
         Eye: <span text.="person.props.eye"></span>
-        {{person..props.eye}}
+        {{person.props.eye}}
         <ul>
             <li for.="c: person.cars">{{c.name}}
                 <input type="text" bind.="c.name">
             </li>
-            <button onclick.="sort()">sort</button>
-            <button onclick.="add()">add</button>
+            <button onclick.="person.cars.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>
+            <button onclick.="person.cars.push({name: 'name' + Math.random()})">add</button>
             <button onclick.="person.cars.splice(0.1)">clear</button>
             <button onclick.="person.cars.reverse()">reverse</button>
             <button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>
             <button onclick.="person.cars.shift()">shift</button>
         </ul>
-        <ul>
-            <li for.="c: person.cars">{{c.name}}
-                <input type="text" bind.="c.name">
-            </li>
-            <button onclick.="sort()">sort</button>
-            <button onclick.="add()">add</button>
-            <button onclick.="person.cars.splice(0.1)">clear</button>
-            <button onclick.="person.cars.reverse()">reverse</button>
-            <button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>
-            <button onclick.="person.cars.shift()">shift</button>
-        </ul>
+        <!--<ul>-->
+            <!--<li for.="c: person.cars">{{c.name}}-->
+                <!--<input type="text" bind.="c.name">-->
+            <!--</li>-->
+            <!--<button onclick.="sort()">sort</button>-->
+            <!--<button onclick.="add()">add</button>-->
+            <!--<button onclick.="person.cars.splice(0.1)">clear</button>-->
+            <!--<button onclick.="person.cars.reverse()">reverse</button>-->
+            <!--<button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>-->
+            <!--<button onclick.="person.cars.shift()">shift</button>-->
+        <!--</ul>-->
         <!--<ul>-->
         <!--<li for.="c: .cars2">{{c.name}}-->
             <!--<input type="text" bind.="c.name">-->

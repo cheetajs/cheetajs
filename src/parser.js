@@ -12,6 +12,11 @@ $cheeta.parser = {
     return map;
   })(),
   reservedWordsRegExp: new RegExp('(^|\\W)(' + this.reservedWords + ')(\\W|$)', 'g'),
+  functionPos: function (ref) {
+    // TODO handle a[1.2]
+    return ref.search(/\( *$/) > -1 ?
+      Math.max(ref.lastIndexOf('.'), ref.lastIndexOf('['), 0) : ref.length;
+  },
   parse: function (ref, fn) {
     function hasReserved(ref) {
       var c = ref.charAt(0);
@@ -23,30 +28,24 @@ $cheeta.parser = {
       // }
       var i = ref.indexOf('.');
       i = i === -1 ? ref.length : i;
-      return _this.reservedWords[ref.substring(0, i)] != null;
+      return parser.reservedWords[ref.substring(0, i)] != null;
     }
 
-    function functionPos(ref) {
-      // TODO handle a[1.2]
-      return ref.search(/\( *$/) > -1 ?
-        Math.max(ref.lastIndexOf('.'), ref.lastIndexOf('[')) : ref.length;
-    }
-
-    var _this = this;
+    var parser = this;
     var jsonObjs = [];
     ref = ref.replace(this.jsonRegExp, function (match) {
       jsonObjs.push(match);
       return '$J';
     });
-    ref.replace(this.modelVarRegExp, function (match) {
+    ref = ref.replace(this.modelVarRegExp, function (match) {
       if (match.charAt(0) === '\'' || match.charAt(0) === '"' || match === 'true' || match === 'false' ||
-        match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match)) {
+        match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match) || match === '$J') {
         return match;
       } else {
         var bracketIndex = match.length;
 
         match = match.replace(/\[ *([^0-9'"].*?)\]/g, function (m, $1, index) {
-          _this.parse($1, fn);
+          parser.parse($1, fn);
           if (bracketIndex === match.length) {
             bracketIndex = index;
           }
@@ -54,11 +53,21 @@ $cheeta.parser = {
         if (hasReserved(match)) {
           return match;
         } else {
-          var index = functionPos(match.substring(0, bracketIndex));
-          var mRef = match.substring(0, index);
-          fn(mRef);
+          var funcIndex = parser.functionPos(match.substring(0, bracketIndex));
+          var expr = match.substring(0, funcIndex);
+          return (fn(parser.toTokens(expr)) || expr) + match.substring(funcIndex);
         }
       }
+    });
+    var i = 0;
+    ref = ref.replace(/\$J/, function () {
+      return jsonObjs[i++];
+    });
+    return ref;
+  },
+  toTokens: function (expr) {
+    return expr.split(/ *\. *| *\[ *| *\] */g).filter(function (el) {
+      return el.length !== 0;
     });
   }
 };

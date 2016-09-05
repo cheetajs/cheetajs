@@ -32,7 +32,8 @@ $cheeta.directive.add({
   order: 800,
   link: function (elem, attr) {
     var split = attr.value.split(':');
-    $cheeta.compiler.linkDirective(elem, 'value.', split[0].split(',')[0], attr.scope);
+    var modelExpr = split[0];
+    $cheeta.compiler.linkDirective(elem, 'value.', modelExpr.split(',')[0], attr.scope);
     // $cheeta.directive.adds.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
     function elemValue() {
       if (elem.type && elem.type.toLowerCase() === 'checkbox') {
@@ -47,7 +48,7 @@ $cheeta.directive.add({
 
     //todo exclude keys that don't edit like arrow keys
     elem.on('change keydown keyup', function () {
-      attr.setValueForRef(elemValue(), split[0]);
+      attr.setModelValue(elemValue(), modelExpr);
       if (split.length > 1) {
         attr.evaluate(split[1]);
       }

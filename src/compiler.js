@@ -1,24 +1,26 @@
 $cheeta.compiler = {
-  recursiveCompile: function (node, scope, skipSiblings) {
+  recursiveCompile: function (node, scope, skipSiblings, skipNode) {
     if (node) {
-      var skip = false;
-      if (node.nodeType === 1) {
-        if (node.tagName.toLowerCase() === 'script') {
-          if (node.getAttribute('id') && node.getAttribute('type').indexOf('template') > -1) {
-            $cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
-            skip = true;
+      var skipChildren;
+      if (!skipNode) {
+        if (node.nodeType === 1) {
+          if (node.tagName.toLowerCase() === 'script') {
+            if (node.getAttribute('id') && node.getAttribute('type').indexOf('template') > -1) {
+              $cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
+              skipChildren = true;
+            }
+          }
+          this.linkDirectives(node, scope);
+        } else if (node.nodeType === 3) {
+          var txt = node.textContent;
+          while (txt.indexOf('{{') > -1) {
+            var resultNode = [];
+            txt = txt.replace(/(.*)\{\{(.*)\}\}(.*)/, this.replaceTextCurly(node, resultNode));
+            node = resultNode[0];
           }
         }
-        this.linkDirectives(node, scope);
-      } else if (node.nodeType === 3) {
-        var txt = node.textContent;
-        while (txt.indexOf('{{') > -1) {
-          var resultNode = [];
-          txt = txt.replace(/(.*)\{\{(.*)\}\}(.*)/, this.replaceTextCurly(node, resultNode));
-          node = resultNode[0];
-        }
       }
-      if (!skip) {
+      if (!skipChildren) {
         this.recursiveCompile(node.firstChild, node.ooScope || scope);
       }
       if (!skipSiblings) {
@@ -69,9 +71,9 @@ $cheeta.compiler = {
     var dir = $cheeta.directive.get(name);
     return dir.link(elem, new $cheeta.Attribute(elem, name, value));
   },
-  doCompile: function (elem, skipSiblings) {
+  doCompile: function (elem, skipNode) {
     elem.addClass('oo-invisible');
-    this.recursiveCompile(elem, this.getScope(elem), skipSiblings);
+    this.recursiveCompile(elem, this.getScope(elem), true, skipNode);
     $cheeta.runFutures(function () {
       elem.removeClass('oo-invisible');
     });
@@ -90,8 +92,12 @@ window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
     $cheeta.isInitialized = true;
     $cheeta.hash.init();
+    // $cheeta.rootModel = new $cheeta.Model('M');
+    // $cheeta.rootModel.value = $cheeta.rootModel.intercept(window.M = {});
+    // window.ooScope = {models: {'M': $cheeta.rootModel}};
     window.M = {};
-    $cheeta.directive.get('model').link(window, new $cheeta.Attribute(window, 'model', 'M'));
+    $cheeta.compiler.linkDirective(window, 'model', 'M: window.M');
+    window.M = window.ooScope.models.M.value;
     $cheeta.compiler.compile(document.documentElement);
   }
 }, false);
