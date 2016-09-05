@@ -108,15 +108,15 @@ $cheeta.directive.add({
 
 $cheeta.directive.add({
   name: 'onaction',
-  link: function (elem, attr, scope) {
-    attr.linkDirective(elem, 'onclick.onkeydown-space-enter.', attr.value, scope);
+  link: function (elem, attr) {
+    $cheeta.compiler.linkDirective(elem, 'onclick.onkeydown-space-enter.', attr.value);
   }
 });
 
 $cheeta.directive.add({
   name: 'init',
   link: function (elem, attr) {
-    $cheeta.future(attr.evaluate);
+    $cheeta.future(function(){attr.evaluate();});
   }
 });
 

@@ -1,7 +1,7 @@
 $cheeta.directive.add({
   name: 'model',
   order: 200,
-  modelWatchFn: function(model, attr) {
+  modelWatchFn: function (model, attr) {
     return function (val) {
       if (model.value !== val) {
         model.value = model.intercept(val);
@@ -27,7 +27,11 @@ $cheeta.directive.add({
       if (modelDef[i] === '') continue;
       var index = modelDef[i].indexOf(':');
       var ref = (modelDef[i].substring(index + 1) || modelDef[i].substring(0, index)).trim();
-      var as = index > -1 ? modelDef[i].substring(0, index).trim() : ref;
+      var as = index > -1 ? modelDef[i].substring(0, index).trim() : null;
+      if (!as) {
+        as = ref;
+        ref = elem.ooScope.parent.__last__ + '.' + ref;
+      }
 
       elem.ooScope.__last__ = as;
       var model = new $cheeta.Model(as);

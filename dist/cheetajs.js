@@ -354,7 +354,6 @@ $cheeta.Model.prototype = {
   },
   delete: function () {
     if (!this.deleted) {
-      console.log('deleted', this.ref());
       this.deleted = true;
       delete this.parent.children[this.names[0]];
     }
@@ -369,7 +368,6 @@ $cheeta.Model.prototype = {
           //   val[methodName] = this.interceptArrayFn(m, val[methodName]);
           // }
         }
-        console.log(obj, 'added as proxy');
         obj = new Proxy(obj, handler);
       }
       obj.__ooModel__ = this;
@@ -408,13 +406,11 @@ $cheeta.Model.ProxyHandler.prototype = {
     if (prop === '__ooModel__') {
       if (this.models.indexOf(value) === -1) this.models.push(value);
     } else {
-      console.log('set', prop, value);
       base[prop] = value;
       for (var i = 0; i < this.models.length; i++) {
         var m = this.models[i];
         if (m.children[prop]) {
           if (Object.isObject(base[prop])) {
-            console.log(base, prop, 'intercepting children');
             base[prop] = m.children[prop].intercept(base[prop]);
           }
           m.children[prop].valueChange();
@@ -424,7 +420,6 @@ $cheeta.Model.ProxyHandler.prototype = {
     return true;
   },
   deleteProperty: function(obj, prop) {
-    console.log('deleted', obj, prop);
     delete obj[prop];
     for (var i = 0; i < this.models.length; i++) {
       var m = this.models[i];
@@ -455,25 +450,25 @@ $cheeta.Model.ArrayHandlerProto = Array.prototype;
 //   // $cheeta.Model.root = windowModel;
 //   // $cheeta.Model.root.modelRef = 'window';
 // })();
-
-$cheeta.model = function (name, value) {
-  if (name === undefined) {
-    return window.M;
-  } else {
-    var model = $cheeta.parser.parse(name, {}).models[0];
-    if (value === undefined) {
-      var val = model.getValue();
-      if (val === undefined) {
-        val = {};
-        model.setValue(val);
-      }
-      return val;
-    } else {
-      model.setValue(value);
-      return value;
-    }
-  }
-};
+//
+// $cheeta.model = function (name, value) {
+//   if (name === undefined) {
+//     return window.M;
+//   } else {
+//     var model = $cheeta.parser.parse(name, {}).models[0];
+//     if (value === undefined) {
+//       var val = model.getValue();
+//       if (val === undefined) {
+//         val = {};
+//         model.setValue(val);
+//       }
+//       return val;
+//     } else {
+//       model.setValue(value);
+//       return value;
+//     }
+//   }
+// };
 
 $cheeta.templates = [];
 $cheeta.watchFns = [];
@@ -509,7 +504,7 @@ $cheeta.Future = function (fn, delay, thisArg) {
     function futureRun(fn) {
       return function () {
         try {
-          results.push(fn.call(thisArg, arguments));
+          results.push(fn.apply(thisArg, arguments));
         } catch (e) {
           if (console.error) {
             console.error(e.message, e);
@@ -986,7 +981,7 @@ $cheeta.compiler = {
       }
     }
     directivs.sort(function (a, b) {
-      return (a.directive.order || 1000) - (b.directive.order || 1000);
+      return (a.order || 1000) - (b.order || 1000);
     });
     return directivs;
   },
@@ -1422,15 +1417,15 @@ $cheeta.directive.add({
 
 $cheeta.directive.add({
   name: 'onaction',
-  link: function (elem, attr, scope) {
-    attr.linkDirective(elem, 'onclick.onkeydown-space-enter.', attr.value, scope);
+  link: function (elem, attr) {
+    $cheeta.compiler.linkDirective(elem, 'onclick.onkeydown-space-enter.', attr.value);
   }
 });
 
 $cheeta.directive.add({
   name: 'init',
   link: function (elem, attr) {
-    $cheeta.future(attr.evaluate);
+    $cheeta.future(function(){attr.evaluate();});
   }
 });
 
@@ -1563,7 +1558,7 @@ $cheeta.directive.add({
 $cheeta.directive.add({
   name: 'model',
   order: 200,
-  modelWatchFn: function(model, attr) {
+  modelWatchFn: function (model, attr) {
     return function (val) {
       if (model.value !== val) {
         model.value = model.intercept(val);
@@ -1589,7 +1584,11 @@ $cheeta.directive.add({
       if (modelDef[i] === '') continue;
       var index = modelDef[i].indexOf(':');
       var ref = (modelDef[i].substring(index + 1) || modelDef[i].substring(0, index)).trim();
-      var as = index > -1 ? modelDef[i].substring(0, index).trim() : ref;
+      var as = index > -1 ? modelDef[i].substring(0, index).trim() : null;
+      if (!as) {
+        as = ref;
+        ref = elem.ooScope.parent.__last__ + '.' + ref;
+      }
 
       elem.ooScope.__last__ = as;
       var model = new $cheeta.Model(as);

@@ -55,7 +55,7 @@ $cheeta.compiler = {
       }
     }
     directivs.sort(function (a, b) {
-      return (a.directive.order || 1000) - (b.directive.order || 1000);
+      return (a.order || 1000) - (b.order || 1000);
     });
     return directivs;
   },

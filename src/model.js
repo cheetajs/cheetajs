@@ -54,7 +54,6 @@ $cheeta.Model.prototype = {
   },
   delete: function () {
     if (!this.deleted) {
-      console.log('deleted', this.ref());
       this.deleted = true;
       delete this.parent.children[this.names[0]];
     }
@@ -69,7 +68,6 @@ $cheeta.Model.prototype = {
           //   val[methodName] = this.interceptArrayFn(m, val[methodName]);
           // }
         }
-        console.log(obj, 'added as proxy');
         obj = new Proxy(obj, handler);
       }
       obj.__ooModel__ = this;
@@ -108,13 +106,11 @@ $cheeta.Model.ProxyHandler.prototype = {
     if (prop === '__ooModel__') {
       if (this.models.indexOf(value) === -1) this.models.push(value);
     } else {
-      console.log('set', prop, value);
       base[prop] = value;
       for (var i = 0; i < this.models.length; i++) {
         var m = this.models[i];
         if (m.children[prop]) {
           if (Object.isObject(base[prop])) {
-            console.log(base, prop, 'intercepting children');
             base[prop] = m.children[prop].intercept(base[prop]);
           }
           m.children[prop].valueChange();
@@ -124,7 +120,6 @@ $cheeta.Model.ProxyHandler.prototype = {
     return true;
   },
   deleteProperty: function(obj, prop) {
-    console.log('deleted', obj, prop);
     delete obj[prop];
     for (var i = 0; i < this.models.length; i++) {
       var m = this.models[i];
@@ -155,25 +150,25 @@ $cheeta.Model.ArrayHandlerProto = Array.prototype;
 //   // $cheeta.Model.root = windowModel;
 //   // $cheeta.Model.root.modelRef = 'window';
 // })();
-
-$cheeta.model = function (name, value) {
-  if (name === undefined) {
-    return window.M;
-  } else {
-    var model = $cheeta.parser.parse(name, {}).models[0];
-    if (value === undefined) {
-      var val = model.getValue();
-      if (val === undefined) {
-        val = {};
-        model.setValue(val);
-      }
-      return val;
-    } else {
-      model.setValue(value);
-      return value;
-    }
-  }
-};
+//
+// $cheeta.model = function (name, value) {
+//   if (name === undefined) {
+//     return window.M;
+//   } else {
+//     var model = $cheeta.parser.parse(name, {}).models[0];
+//     if (value === undefined) {
+//       var val = model.getValue();
+//       if (val === undefined) {
+//         val = {};
+//         model.setValue(val);
+//       }
+//       return val;
+//     } else {
+//       model.setValue(value);
+//       return value;
+//     }
+//   }
+// };
 
 $cheeta.templates = [];
 $cheeta.watchFns = [];
@@ -209,7 +204,7 @@ $cheeta.Future = function (fn, delay, thisArg) {
     function futureRun(fn) {
       return function () {
         try {
-          results.push(fn.call(thisArg, arguments));
+          results.push(fn.apply(thisArg, arguments));
         } catch (e) {
           if (console.error) {
             console.error(e.message, e);
