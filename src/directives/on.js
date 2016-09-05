@@ -1,4 +1,4 @@
-$cheeta.directive({
+$cheeta.directive.add({
 	name: 'on*',
 	keyconsts: {
 		'backspace':8,'tab':9,'enter':13,'shift':16,'ctrl':17,'alt':18,'space':32,'pause':19,'break':19,'capslock':20,'escape':27,'esc':27,'pageup':33,'pagedown':34,'end':35,

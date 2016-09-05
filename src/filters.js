@@ -1,4 +1,4 @@
-window.M.filter = function (array, q, options) {
+$cheeta.filter = function (array, q, options) {
   function contains(obj, q) {
     if (Object.isString(obj)) {
       var i = obj.search(q instanceof RegExp ? q : new RegExp(q, options && options.matchCase ? '' : 'i'));
@@ -57,5 +57,4 @@ window.M.filter = function (array, q, options) {
   } else {
     return array;
   }
-
 };

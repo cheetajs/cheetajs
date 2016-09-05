@@ -1,4 +1,4 @@
-$cheeta.directive({
+$cheeta.directive.add({
 	name: 'if',
 	isTemplate: true,
 	order: 50,

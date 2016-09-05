@@ -1,5 +1,5 @@
 document.addCssStyle('.oo-invisible { visibility: hidden; } .hidden {display: none!important}');
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'watch*',
   link: function (elem, attr) {
     function makeEval(fn) {
@@ -15,7 +15,7 @@ $cheeta.directive({
     }
   }
 });
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'value',
   link: function (elem, attr) {
     attr.watch(function (val) {
@@ -27,14 +27,13 @@ $cheeta.directive({
     });
   }
 });
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'bind',
   order: 800,
-  link: function (elem, attr, allAttr, modelRefs) {
+  link: function (elem, attr) {
     var split = attr.value.split(':');
-    $cheeta.compiler.compileAttr(elem,
-      {name: 'value.', value: split[0].split(',')[0]}, modelRefs);
-    // $cheeta.directives.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
+    $cheeta.compiler.linkDirective(elem, 'value.', split[0].split(',')[0], attr.scope);
+    // $cheeta.directive.adds.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
     function elemValue() {
       if (elem.type && elem.type.toLowerCase() === 'checkbox') {
         return elem.checked;
@@ -46,22 +45,16 @@ $cheeta.directive({
       }
     }
 
-    function listen(models) {
-      //todo exclude keys that don't edit like arrow keys
-      elem.on('change keydown keyup', function () {
-        for (var i = 0; i < models.length; i++) {
-          models[i].setValue(elemValue());
-        }
-        if (split.length > 1) {
-          attr.evaluate(split[1]);
-        }
-      });
-    }
-
-    listen(attr.models(split[0]));
+    //todo exclude keys that don't edit like arrow keys
+    elem.on('change keydown keyup', function () {
+      attr.setValueForRef(elemValue(), split[0]);
+      if (split.length > 1) {
+        attr.evaluate(split[1]);
+      }
+    });
   }
 });
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'text',
   link: function (elem, attr) {
     attr.watch(function (val) {
@@ -70,7 +63,7 @@ $cheeta.directive({
     });
   }
 });
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'html',
   link: function (elem, attr) {
     attr.watch(function (val) {
@@ -81,7 +74,7 @@ $cheeta.directive({
   }
 });
 
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'show',
   link: function (elem, attr) {
     attr.watch(function (val) {
@@ -94,41 +87,39 @@ $cheeta.directive({
   }
 });
 
-$cheeta.directive({
-  name: 'hover', link: function (elem, attr, allAttr, modelRefs) {
+$cheeta.directive.add({
+  name: 'hover', link: function (elem, attr) {
     var over = false;
-    var model = attr.model(attr.value, modelRefs);
     elem.addEventListener('mouseover', function () {
       if (!over) {
         over = true;
-        model.setValue(over);
+        attr.setValue(over);
       }
     });
     elem.addEventListener('mouseleave', function () {
       if (over) {
         over = false;
-        model.setValue(over);
+        attr.setValue(over);
       }
     });
   }
 });
 
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'onaction',
-  link: function (elem, attr, allAttr, modelRefs) {
-    $cheeta.compiler.compileAttr(elem,
-      {name: 'onclick.onkeydown-space-enter.', value: attr.value}, modelRefs);
+  link: function (elem, attr, scope) {
+    attr.linkDirective(elem, 'onclick.onkeydown-space-enter.', attr.value, scope);
   }
 });
 
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'init',
   link: function (elem, attr) {
     $cheeta.future(attr.evaluate);
   }
 });
 
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'focus',
   link: function (elem, attr) {
     attr.watch(function (val) {
@@ -137,7 +128,7 @@ $cheeta.directive({
   }
 });
 
-$cheeta.directive({
+$cheeta.directive.add({
   name: '',
   link: function (elem, attr) {
     var baseAttrName = attr.key;
@@ -159,45 +150,5 @@ $cheeta.directive({
         elem.setAttribute(baseAttrName, val);
       }
     });
-  }
-});
-
-$cheeta.directive({
-  name: 'model',
-  order: 200,
-  lastId: 0,
-  link: function (elem, attr, allAttr, modelRefs) {
-    //TODO handle app1['myapp,yourapp']
-    var modelDef = attr.value.split(/ *[;] */g);
-    var models = {};
-
-    //function makeWatch(m, ref) {
-    //	return function() {
-    //		m.value = attr.evaluate(ref);
-    //		m.valueChange();
-    //	};
-    //}
-
-    for (var i = 0; i < modelDef.length; i++) {
-      if (modelDef[i] === '') continue;
-      //TODO handle app1['123 as 123']
-      var index = modelDef[i].indexOf(':');
-      var ref = (modelDef[i].substring(index + 1) || modelDef[i].substring(0, index)).trim();
-      var as = index > -1 ? modelDef[i].substring(0, index).trim() : null;
-      //if (as) {
-      //var m = new $cheeta.Model(as, null);
-      //m.refId = this.lastId++;
-      //m.value = attr.evaluate(ref);
-      //attr.watch(makeWatch(m, ref), ref);
-      //models[as] = m;
-      //models.$$last$$ = m;
-      //} else {
-      var model = attr.model(ref, modelRefs);
-      models[as || model.names[0]] = model;
-      models.$$last$$ = model;
-      //}
-//			eval(model.ref() + '=' + model.ref() + '|{}');
-    }
-    return models;
   }
 });

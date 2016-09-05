@@ -1,5 +1,5 @@
 // for maps you can do for.="key: Object.keys(obj)"
-$cheeta.directive({
+$cheeta.directive.add({
   name: 'for',
   isTemplate: true,
   order: 100,

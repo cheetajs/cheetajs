@@ -1,7 +1,8 @@
-$cheeta.directives = {
+$cheeta.directive = {
   directives: {},
   globals: [],
   defaults: [],
+  removeEventName: 'cheeta-removed',
   add: function (directive) {
     var names = directive.name.split(',');
     for (var i = 0; i < names.length; i++) {
@@ -17,9 +18,12 @@ $cheeta.directives = {
     }
   },
   get: function (name) {
+    var all = this.getAll(name);
+    return all.length ? all[0] : undefined;
+  },
+  getAll: function (name) {
     var dirs = [], i;
-    name = name.toLowerCase();
-    var split = name.split('.');
+    var split = name.toLowerCase().split('.');
     if (split[split.length - 1] === '') {
       split.pop();
     }
@@ -31,14 +35,14 @@ $cheeta.directives = {
       var directives = this.directives[n];
       if (directives) {
         for (j = 0; j < directives.length; j++) {
-          ds.push({directive: directives[j], name: n});
+          ds.push(directives[j]);
         }
       }
       if (!ds.length) {
         for (j = 0; j < this.globals.length; j++) {
           var g = this.globals[j].name;
           if (n.replace(/^data-/, '').indexOf(g.substring(0, g.length - 1)) === 0) {
-            ds.push({directive: this.globals[j], name: n});
+            ds.push(this.globals[j]);
           }
         }
       }
@@ -46,151 +50,98 @@ $cheeta.directives = {
     }
     if (!dirs.length) {
       for (i = 0; i < this.defaults.length; i++) {
-        dirs.push({directive: this.defaults[i], name: name});
+        dirs.push(this.defaults[i]);
       }
     }
-
     return dirs;
+  }
+};
+$cheeta.Attribute = function (elem, name, value) {
+  this.name = name;
+  this.value = value;
+  this.elem = elem;
+};
+$cheeta.Attribute.prototype = {
+  get key() {
+    return this.name.replace(/^data-/, '').replace(/\.$/, '');
   },
-
-  modelAttr: function (elem, modelRefs) {
-    return function (attr) {
-      if (Object.isString(attr)) {
-        attr = {name: attr, value: elem.attr(attr)};
-      }
-      if (attr == null) {
-        return {
-          modelValue: function () {
-            return undefined;
-          }
-        };
-      }
-      attr.key = attr.name.replace(/^data-/, '').replace(/\.$/, '');
-      attr.remove = function () {
-        elem.removeAttribute(attr.name);
-      };
-      attr.parseResult = {};
-      attr.resolve = function (ref, mRefs) {
-        var parseRef = ref || attr.value;
-        if (!attr.parseResult[parseRef]) {
-          attr.parseResult[parseRef] = $cheeta.parser.parse(parseRef, mRefs || modelRefs);
-        }
-        return attr.parseResult[parseRef];
-      };
-      attr.models = function (ref, mRefs) {
-        return attr.resolve(ref, mRefs).models;
-      };
-      attr.model = function (ref, mRefs) {
-        return attr.resolve(ref, mRefs).model;
-      };
-      attr.values = {};
-      attr.unwatches = [];
-      attr.watch = function (fn, ref) {
-        function makeCallback(model, values) {
-          return function () {
-            values.oldVal = values.val;
-            values.val = attr.evaluate(ref, {});
-            fn.call(model, values.val, values.oldVal);
-          };
-        }
-
-        var models = attr.models(ref), callback;
-        for (var i = 0; i < models.length; i++) {
-          var m = models[i];
-          if (m instanceof $cheeta.Model && m !== $cheeta.Model.root) {
-            callback = makeCallback(m, attr.values);
-            attr.unwatches.push(m.watch(callback));
-          }
-        }
-        if (!callback) {
-          callback = makeCallback(null, attr.values);
-        }
-        $cheeta.future(callback, 1);
-      };
-
-      attr.evaluate = function (ref, additionalModelRefs) {
-        function addModelParams(params) {
-          params = params || {};
-          var key;
-          for (key in params) {
-            if (params.hasOwnProperty(key)) {
-              params[key] = params[key];
-            }
-          }
-          for (key in modelRefs) {
-            if (modelRefs.hasOwnProperty(key)) {
-              var m = modelRefs[key];
-              params[key] = m instanceof $cheeta.Model ? m.getValue() : m;
-            }
-          }
-          //var rootVal = $cheeta.Model.root.value;
-          //for (key in rootVal) {
-          //	if (params[key] === undefined && rootVal.hasOwnProperty(key)) {
-          //		params[key] = rootVal[key];
-          //	}
-          //}
-          params[$cheeta.Model.root.names[0]] = $cheeta.Model.root.getValue();
-          return params;
-        }
-
-        var resolvedRef = attr.resolve(ref, modelRefs).ref;
-        if ($cheeta.debug) {
-          elem.setAttribute('OO-' + attr.name, resolvedRef);
-        }
-        var params = addModelParams(additionalModelRefs);
-        params.$elem = elem;
-        var fn;
-        //todo try to define only the vars that are used in this model ref
-        //todo have more descriptive error in case script is failing
-        var escapedVal = resolvedRef.replace(/'/g, '\\\'');
-        var keys = Object.keys(params);
-        eval('var fn = function(' + keys.join(',') + '){return eval(\'' + escapedVal + '\');};');
-        var paramValues = keys.map(function (k) {
-          return params[k];
-        });
-        try {
-          var val = fn.apply(elem, paramValues);
-          // console.log(escapedVal + ': ' + val);
-          return val;
-        } catch (e) {
-          // console[e.message && e.message.indexOf('Cannot read property ') > -1 ? 'warn' : 'error'](
-          console.error(e.constructor.prototype.toString(), e.message || e, attr.name, attr.value, elem);
-              // console.error(e.constructor.prototype.toString(), e.message || e,
-              //   '"' + resolvedRef + '"', attr, elem, params);
-          throw e;
-          // return undefined;
-        }
-      };
-
-      return attr;
+  watch: function (fn, expr) {
+    var attr = this;
+    expr = expr || this.value;
+    if (expr.startsWith('.') && this.elem.ooScope.__last__) {
+      expr = this.elem.ooScope.__last__ + expr;
+    }
+    var updateFn = function () {
+      fn.call(this, attr.evaluate(expr, updateFn.referredScopes));
     };
-  }
-
-};
-
-$cheeta.directive = function (def) {
-  if (Object.isString(def)) {
-    return $cheeta.directives.get(def);
-  }
-  def.linkFn = function (elem, attr, modelRefs) {
-    var allAttr = $cheeta.directives.modelAttr(elem, modelRefs);
-    elem.M = modelRefs;
-    var thisAttr = allAttr(attr);
-    elem.addEventListener($cheeta.directive.removeEventName, function () {
-      // console.log('removed', elem);
-      for (var i = 0; i < attr.unwatches.length; i++) {
-        thisAttr.unwatches[i]();
-      }
+    updateFn.referredScopes = [];
+    $cheeta.parser.parse(expr, function (expr) {
+      var prop = expr.substring(0, expr.search(/[\.\[]/));
+      var scope = attr.findReferredScope(attr.elem.ooScope, prop);
+      updateFn.referredScopes.push(scope);
+      scope.put(expr, updateFn);
+      $cheeta.objectModel.interceptAndListen(scoperefEl.oo.values[prop], this);
     });
-    elem.hasDirective = true;
-    return def.link.call(this, elem, attr, allAttr, modelRefs);
-  };
-
-  $cheeta.directives.add(def);
-
-  return def;
+    // updateFn();
+  },
+  findReferredScope: function (scope, prop) {
+    return scope ? ((scope.get(prop) && scope) || this.findReferredScope(scope.parent, prop))
+      : window.ooScope;
+  },
+  // valueChanged: function (val, path) {
+  //   var entries = this.elem.ooScope.getPrefixes(path);
+  //   if (entries) {
+  //     for (var i = 0; i < entries.length; i++) {
+  //       var expr = entries[i].key, list = entries[i].value;
+  //       $cheeta.objectModel.interceptAndListen(val, expr, this);
+  //       for (var j = 0; j < list.length; j++) {
+  //         list[j]();
+  //       }
+  //     }
+  //   }
+  // },
+  getExprValue: function (obj, expr) {
+    var split = (expr || this.value).split(/ *\. *| *\[ *| *\] */g);
+    for (var i = 1; i < split.length - 1; i++) {
+      if (obj === undefined) {
+        return;
+      }
+      obj = obj[split[i]];
+    }
+    return {val: obj, prop: split[split.length - 1]};
+  },
+  attr: function (name) {
+    return new $cheeta.Attribute(this.elem, name, this.getAttribute(name) || this.getAttribute(name + '.') || this.getAttribute('data-' + name + '.'));
+  },
+  evaluate: function (ref, scopes) {
+    var params = {};
+    for (var i = 0; i < scopes.length; i++) {
+      var scope = scopes[i];
+      Object.copy(scope.values, params);
+    }
+    var fn;
+    //todo try to define only the vars that are used in this model ref
+    //todo have more descriptive error in case script is failing
+    var escapedVal = (ref || this.value).replace(/'/g, '\\\'');
+    var keys = Object.keys(params);
+    eval('var fn = function(' + keys.join(',') + '){return eval(\'' + escapedVal + '\');};');
+    var paramValues = keys.map(function (k) {
+      return params[k];
+    });
+    try {
+      var val = fn.apply(this.elem, paramValues);
+      // console.log(escapedVal + ': ' + val);
+      return val;
+    } catch (e) {
+      // console[e.message && e.message.indexOf('Cannot read property ') > -1 ? 'warn' : 'error'](
+      console.error(e.constructor.prototype.toString(), e.message || e, this.name, this.value, this.elem);
+      // console.error(e.constructor.prototype.toString(), e.message || e,
+      //   '"' + resolvedRef + '"', attr, elem, params);
+      // throw e;
+      return undefined;
+    }
+  }
 };
-$cheeta.directive.removeEventName = 'cheeta-removed';
 
 $cheeta.future(function () {
   function fireRemove(el, removeSiblings) {
@@ -218,63 +169,55 @@ $cheeta.future(function () {
   });
   mutationObserver.observe(document.body, whatToObserve);
 });
-//	this.tokenizeAttrVal = function(val, onToken) {
-//		var quote = null, regexpMod = false, index = -1, optionsSplitIndex = val.indexOf(';');
-//		if (optionsSplitIndex > -1 && optionsSplitIndex) 
-//		val += '\x1a';
-//		for (var i = 0; i < val.length; i++) {
-//			var ch = val.charAt(i);
-//			if (quote != null) {
-//				if (ch == quote && val.charAt(i - 1) != '\\') {
-//					if (quote == '/') {
-//						regexpMod = true;
-//					}
-//					quote = null;
-//				}
-//				onToken.onLiteral(ch);
-//			} else {
-//				if (regexpMod) {
-//					if (ch < 'a' && ch > 'z') {
-//						regexpMod = false;
-//					}
-//					onToken.onLiteral(ch);
-//				} else if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n' || ch === '!' || ch === '"' || ch === '[' || ch === ']' || 
-//						(ch >= '%' && ch <= '/' && ch != '.') || (ch >= ':' && ch <= '?') || (ch >= '{' && ch <= '~') || ch === '^' || ch == '\x1a') {
-//					if (ch === '\'' || ch === '"' || ch === '/') {
-//						quote = ch;
-//					}
-//					if (index > -1) {
-//						var name = val.substring(index, i);
-//						if (name === 'true' || name === 'false' || name === 'undefined' || name === 'null' || 
-//							name === 'NaN' || !isNaN(name)) {
-//							onToken.onLiteral(name);
-//						} else {
-//							var ii = i;
-//							while (val.charAt(ii) == ' ') {
-//								ii++;
-//							}
-//							if (val.charAt(ii) == '(') {
-//								var fnIndex = name.lastIndexOf('.');
-//								if (fnIndex > -1) {
-//									onToken.onFnVar(name.substring(0, fnIndex));
-//									onToken.onLiteral(name.substring(fnIndex));
-//								} else {
-//									onToken.onLiteral(name);
-//								}
-//							} else {
-//								onToken.onVar(name);
-//							}
-//						}
-//						index = -1;
-//					}
-//					if (ch !== '\x1a') {
-//						onToken.onLiteral(ch);
-//					}
-//				} else {
-//					if (index == -1) {
-//						index = i;
-//					}
-//				}
-//			}
-//		}
-//	};
+
+// attr.setValueForRef = function (val, ref) {
+//   var split = (ref || attr.value).split(/ *\. *| *\[ *| *\] */g);
+//   var obj = modelRefs[split[0]].value;
+//   for (var i = 1; i < split.length - 1; i++) {
+//     if (obj === undefined) {
+//       return;
+//     }
+//     obj = obj[split[i]];
+//   }
+//   obj[split[split.length - 1]] = val;
+// };
+//
+// attr.evaluate = function (ref, additionalModelRefs) {
+//   function addModelParams() {
+//     var params = {};
+//     Object.copy(additionalModelRefs, params);
+//     Object.copy(modelRefs, params);
+//     for (var key in params) {
+//       if (params.hasOwnProperty(key)) {
+//         var m = params[key];
+//         params[key] = m instanceof $cheeta.Model ? m.value : m;
+//       }
+//     }
+//     return params;
+//   }
+//
+//   var params = addModelParams();
+//   params.$elem = elem;
+//   var fn;
+//   //todo try to define only the vars that are used in this model ref
+//   //todo have more descriptive error in case script is failing
+//   var escapedVal = attr.value.replace(/'/g, '\\\'');
+//   var keys = Object.keys(params);
+//   eval('var fn = function(' + keys.join(',') + '){return eval(\'' + escapedVal + '\');};');
+//   var paramValues = keys.map(function (k) {
+//     return params[k];
+//   });
+//   try {
+//     var val = fn.apply(elem, paramValues);
+//     // console.log(escapedVal + ': ' + val);
+//     return val;
+//   } catch (e) {
+//     // console[e.message && e.message.indexOf('Cannot read property ') > -1 ? 'warn' : 'error'](
+//     console.error(e.constructor.prototype.toString(), e.message || e, attr.name, attr.value, elem);
+//     // console.error(e.constructor.prototype.toString(), e.message || e,
+//     //   '"' + resolvedRef + '"', attr, elem, params);
+//     throw e;
+//     // return undefined;
+//   }
+// };
+

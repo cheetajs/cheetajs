@@ -35,6 +35,18 @@ Array.prototype.remove = function(item) {
     }
 };
 
+Object.extend = function(superClass, clazz) {
+    clazz.prototype = Object.create(superClass.prototype);
+    clazz.prototype.constructor = clazz;
+};
+
+// String.prototype.capitalize = function() {
+//     if (this.length) {
+//         return this.charAt(0).toUpperCase() + this.substring(1);
+//     }
+//     return this;
+// };
+
 //window.Service = function(input, fn, output) {
 //    this.input = input;
 //    this.fn = fn;

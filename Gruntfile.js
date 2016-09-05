@@ -6,7 +6,7 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
     concat: {
     	build: {
-    		src: ['src/lang.js', 'src/dom.js', 'src/model.js', 'src/parser.js', 'src/directive.js', 'src/compiler.js',
+    		src: ['src/util.js', 'src/lang.js', 'src/dom.js', 'src/model.js', 'src/parser.js', 'src/directive.js', 'src/compiler.js',
     		        'src/http.js', 'src/api.js', 'src/interceptor.js',
     		        'src/directives/*.js', 'src/hash.js', 'src/filters.js'],
     		dest: 'dist/<%= pkg.name %>.js'
@@ -26,7 +26,7 @@ module.exports = function(grunt) {
     devserver: {server: {}},
     watch: {
       js: {
-        files: ['src/{,*/}*.js'],
+        files: ['src/{,*/}*.js', 'Gruntfile.js'],
         tasks: ['jshint', 'concat']
       }
     },

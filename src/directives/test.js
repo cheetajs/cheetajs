@@ -1,4 +1,4 @@
-$cheeta.directive({
+$cheeta.directive.add({
     name: 'test',
     order: 10000,
     link: function(elem, attr, allAttr) {
