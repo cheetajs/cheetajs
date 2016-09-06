@@ -7,7 +7,7 @@ $cheeta.directive.add({
 		elem.addAfter(refElem);
 		elem.removeAttr('if.');
 		var addedElem;
-		elem.cheetaNotCompiled = true;
+		elem.isTemplatePlaceHolder = true;
 		elem.addClass('hidden');
 
 		attr.watch(function(val) {

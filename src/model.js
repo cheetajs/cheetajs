@@ -16,6 +16,13 @@ $cheeta.Model.prototype = {
       model = new $cheeta.Model(name, this);
       this.children[name] = model;
     }
+    // set value to it's own value to make sure it is intercepted
+    setTimeout(function (model) {
+      var value = model.getModelValue();
+      if (Object.isObject(value)) {
+        model.setModelValue(value);
+      }
+    }, 0, this);
     return model;
   },
   makeChildren: function (tokens) {
@@ -25,16 +32,46 @@ $cheeta.Model.prototype = {
     }
     return model;
   },
-  valueChange: function () {
+  fullRef: function () {
+    if (this.parent == null) {
+      if (this.refModel) {
+        return this.refModel.fullRef();
+      } else {
+        return this.name;
+      }
+    } else {
+      return this.parent.fullRef() + (!isNaN(this.name) ? '[\'' + this.name + '\']' : '.' + this.name);
+    }
+  },
+  getModelValue: function () {
+    if (this.parent) {
+      var parentVal = this.parent.getModelValue();
+      return parentVal && parentVal[this.name];
+    } else if (this.refModel) {
+      return this.refModel.getModelValue();
+    } else
+      return $cheeta.Model.root;
+  },
+  setModelValue(val) {
+    if (this.parent) {
+      var parentVal = this.parent.getModelValue();
+      if (parentVal) parentVal[this.name] = val;
+    } else if (this.refModel) {
+      this.refModel.setModelValue(val);
+    }
+  },
+  valueChange: function (obj) {
+    // if (this.getModelValue() !== obj) {
     for (var i = 0; i < this.listeners.length; i++) {
       var listener = this.listeners[i];
-      listener.call(this);
+      listener.call(this, obj);
     }
     for (var key in this.children) {
       if (this.children.hasOwnProperty(key)) {
-        this.children[key].valueChange();
+        this.children[key].valueChange(obj && obj[key]);
       }
     }
+    // }
     return this;
   },
   addListener: function (callback) {
@@ -55,22 +92,43 @@ $cheeta.Model.prototype = {
   delete: function () {
     if (!this.deleted) {
       this.deleted = true;
-      delete this.parent.children[this.names[0]];
+      if (this.parent) delete this.parent.children[this.name];
+      for (var key in this.children) {
+        if (this.children.hasOwnProperty(key)) {
+          this.children[key].delete();
+        }
+      }
+      if (this.refs) {
+        for (var i = 0; i < this.refs.length; i++) {
+          this.refs[i].delete();
+        }
+      }
     }
   },
   intercept: function (obj) {
     if (obj) {
       if (!('__isOoProxy__' in obj)) {
         var handler = new $cheeta.Model.ProxyHandler();
-        if (Object.isArray(obj)) {
-          // for (var j = 0; j < this.arrayMethodNames.length; j++) {
-          //   var methodName = this.arrayMethodNames[j];
-          //   val[methodName] = this.interceptArrayFn(m, val[methodName]);
-          // }
-        }
+        // if (Object.isArray(obj)) {
+        // for (var j = 0; j < this.arrayMethodNames.length; j++) {
+        //   var methodName = this.arrayMethodNames[j];
+        //   val[methodName] = this.interceptArrayFn(m, val[methodName]);
+        // }
+        // }
         obj = new Proxy(obj, handler);
       }
       obj.__ooModel__ = this;
+    }
+    return obj;
+  },
+  interceptAllChildren: function (obj) {
+    if (Object.isObject(obj)) {
+      obj = this.intercept(obj);
+      for (var key in this.children) {
+        if (this.children.hasOwnProperty(key)) {
+          obj[key] = this.children[key].interceptAllChildren(obj[key]);
+        }
+      }
     }
     return obj;
   },
@@ -106,25 +164,28 @@ $cheeta.Model.ProxyHandler.prototype = {
     if (prop === '__ooModel__') {
       if (this.models.indexOf(value) === -1) this.models.push(value);
     } else {
+      console.log('set', prop, base[prop], value);
       base[prop] = value;
       for (var i = 0; i < this.models.length; i++) {
         var m = this.models[i];
+        if (m.deleted) {
+          this.models.splice(i--, 1);
+          continue;
+        }
         if (m.children[prop]) {
-          if (Object.isObject(base[prop])) {
-            base[prop] = m.children[prop].intercept(base[prop]);
-          }
-          m.children[prop].valueChange();
+          base[prop] = m.children[prop].interceptAllChildren(base[prop]);
+          m.children[prop].valueChange(base[prop]);
         }
       }
     }
     return true;
   },
-  deleteProperty: function(obj, prop) {
+  deleteProperty: function (obj, prop) {
     delete obj[prop];
     for (var i = 0; i < this.models.length; i++) {
       var m = this.models[i];
       if (m.children[prop]) {
-        m.children[prop].valueChange();
+        m.children[prop].delete();
       }
     }
     return true;

@@ -1,60 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="../dist/cheetajs.js"></script>
+  <script src="../dist/cheetajs.js"></script>
 </head>
 <body model.="person">
-    <div>
-        <input type="text" bind.=".name" id="value">
-        Name: <span text.=".name"></span>
-        <input type="text" bind.="person.props.eye">
-        Eye: <span text.="person.props.eye"></span>
-        {{person.props.eye}}
-        <ul>
-            <li for.="c: person.cars">{{c.name}}
-                <input type="text" bind.="c.name">
-            </li>
-            <button onclick.="person.cars.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>
-            <button onclick.="person.cars.push({name: 'name' + Math.random()})">add</button>
-            <button onclick.="person.cars.splice(0.1)">clear</button>
-            <button onclick.="person.cars.reverse()">reverse</button>
-            <button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>
-            <button onclick.="person.cars.shift()">shift</button>
-        </ul>
-        <!--<ul>-->
-            <!--<li for.="c: person.cars">{{c.name}}-->
-                <!--<input type="text" bind.="c.name">-->
-            <!--</li>-->
-            <!--<button onclick.="sort()">sort</button>-->
-            <!--<button onclick.="add()">add</button>-->
-            <!--<button onclick.="person.cars.splice(0.1)">clear</button>-->
-            <!--<button onclick.="person.cars.reverse()">reverse</button>-->
-            <!--<button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>-->
-            <!--<button onclick.="person.cars.shift()">shift</button>-->
-        <!--</ul>-->
-        <!--<ul>-->
-        <!--<li for.="c: .cars2">{{c.name}}-->
-            <!--<input type="text" bind.="c.name">-->
-        <!--</li>-->
-        <!--<button onclick.="sort()">sort</button>-->
-        <!--<button onclick.="add()">add</button>-->
-    </ul>
-    </div>
-
-    <script>
-        Oo.future(function() {
-            M.person = {};
-            M.person.name = 'Danial';
-            M.person.props = {eye:'red', hair:'blue'};
-            M.person.cars = [{name:'Porche'}, {name:'Ferrari'}, /*{name:'Tesla'}*/]
-            M.person.cars2 = M.person.cars
-            M.sort = function() {
-                M.person.cars.sort(function(a,b){return a.name<b.name ? -1 : 1})
-            }
-            M.add = function() {
-                M.person.cars.push({name: 'Car' + Math.random()});
-            }
-        });
-    </script>
+<input type="text" bind.=".name" id="value">
+Name: <span text.=".name"></span>
+<input type="text" bind.=".props.eye">
+Eye: <span text.=".props.eye"></span>
+{{.props.eye}}
+<ul>
+  <li for.="c: person.cars">{{.name}}
+    <input type="text" bind.=".name">
+  </li>
+  <button onclick.="person.cars.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>
+  <button onclick.="person.cars.push({name: 'name' + Math.random()})">add</button>
+  <button onclick.="person.cars.splice(0.1)">clear</button>
+  <button onclick.="person.cars.reverse()">reverse</button>
+  <button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>
+  <button onclick.="person.cars.shift()">shift</button>
+</ul>
+<ul>
+  <li for.="c: person.cars2">{{.name}}
+    <input type="text" bind.=".name">
+  </li>
+  <button onclick.="person.cars2.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>
+  <button onclick.="person.cars2.push({name: 'name' + Math.random()})">add</button>
+  <button onclick.="person.cars2.splice(0.1)">clear</button>
+  <button onclick.="person.cars2.reverse()">reverse</button>
+  <button onclick.="person.cars2.unshift({name:'aaaa'})">unshift</button>
+  <button onclick.="person.cars2.shift()">shift</button>
+</ul>
+<script type="html/template" id="t1">
+  {{node.name}}
+  <ul>
+    <li for.="node: node.children" view.="'t1'"></li>
+  </ul>
+</script>
+<div view.="'t1'" model.="node: M.tree"></div>
+<div model.="node: M.tree">
+{{node.name}}
+aaa {{node.children[0].name}} aaa
+<ul>
+<li model.="node: node.children[0]">
+{{node.name}}
+<ul>
+<li model.="node: node.children[1]">{{node.name}}</li>
+<li model.="node: node.children[0]">{{node.name}}</li>
+<li model.="node: node.children[2]">{{node.name}}</li>
+</ul>
+</li>
+</ul>
+</div>
+<script>
+  Oo.future(function () {
+    M.person = {};
+    M.person.name = 'Danial';
+    M.person.props = {eye: 'red', hair: 'blue'};
+    M.person.cars = [{name: 'Porche'}, {name: 'Ferrari'}, /*{name:'Tesla'}*/]
+    M.person.cars2 = M.person.cars
+    M.tree = {name: 'hi', children: [{name: 'aaa', children: [{name: 'b'}, {name: 'c'}, {name: 'd'}]}]}
+  });
+</script>
 </body>
 </html>

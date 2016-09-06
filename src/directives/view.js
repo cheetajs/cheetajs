@@ -4,9 +4,9 @@ $cheeta.directive.add({
   baseURL: window.location.protocol + '//' + window.location.hostname +
   (window.location.port && ':' + window.location.port) + window.location.pathname,
   loadView: function (elem, content) {
-    if (!elem.cheetaNotCompiled) {
+    if (!elem.isTemplatePlaceHolder) {
       elem.innerHTML = content;
-      $cheeta.compiler.compileChildren(elem);
+      // $cheeta.compiler.compileChildren(elem);
     }
   },
   loadingElements: {},

@@ -1,4 +1,4 @@
-document.addCssStyle('.oo-invisible { visibility: hidden; } .hidden {display: none!important}');
+document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');
 $cheeta.directive.add({
   name: 'watch*',
   link: function (elem, attr) {

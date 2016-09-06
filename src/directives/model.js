@@ -1,27 +1,25 @@
 $cheeta.directive.add({
   name: 'model',
   order: 200,
-  modelWatchFn: function (model, attr) {
-    return function (val) {
-      if (model.value !== val) {
-        model.value = model.intercept(val);
-        if (model.value !== val) {
-          attr.setModelValue(model.value, model.ref);
-        } else {
-          model.valueChange();
-        }
-        // console.log('set model value' + model.name, model.value);
-        // var fn;
-        // eval('var fn = function(v){' + model.ref + '=v;};');
-        // fn.call(this, model.value);
-      }
+  id: 1,
+  linkModelToParentFn: function (model) {
+    return function (baseModel, tokens, refModel) {
+      model.refTokens = tokens;
+      model.baseModel = baseModel;
+      model.refModel = refModel;
+      refModel.refs = refModel.refs || [];
+      refModel.refs.push(model);
+      refModel.addListener(function (obj) {
+        model.intercept(obj);
+        model.valueChange(obj);
+      });
     };
   },
   link: function (elem, attr) {
     //TODO handle app1['myapp,yourapp']
     var modelDef = attr.value.split(/ *[;] */g);
 
-    elem.ooScope = {models: {}, parent: elem.ooScope};
+    elem.ooScope = {models: {}, parent: elem.ooScope, id: this.id++};
 
     for (var i = 0; i < modelDef.length; i++) {
       if (modelDef[i] === '') continue;
@@ -33,16 +31,11 @@ $cheeta.directive.add({
         ref = elem.ooScope.parent.__last__ + '.' + ref;
       }
 
-      elem.ooScope.__last__ = as;
       var model = new $cheeta.Model(as);
+      attr.parseModels(ref, this.linkModelToParentFn(model), true);
+      elem.ooScope.__last__ = as;
       elem.ooScope.models[as] = model;
-      model.ref = ref;
-      var modelWatchFn = this.modelWatchFn(model, attr);
-      attr.watch(modelWatchFn, ref);
-      var val = attr.evaluate(ref);
-      if (val != null) {
-        modelWatchFn(val);
-      }
+      // model.valueChange();
     }
   }
 });

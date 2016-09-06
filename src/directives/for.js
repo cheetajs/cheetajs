@@ -10,44 +10,56 @@ $cheeta.directive.add({
     var parsed = this.parse(attr.value);
     elem.removeAttr('for.');
     elem.attr('model.', parsed.variable + ':<M>;' + (elem.attr('model.') || ''));
-    elem.cheetaNotCompiled = true;
+    elem.isTemplatePlaceHolder = true;
     elem.addClass('hidden');
 
+    var isRepeating = false;
     function repeatElements(val, oldVal, isRange) {
-      oldVal = oldVal || 0;
-      var i;
-      if (val > oldVal) {
-        for (i = oldVal; i < val; i++) {
-          var el = elem.cloneNode(true);
-          el.removeClass('hidden');
-          el.attr('model.', el.attr('model.').replace('<M>',
-            isRange ? i + 1 : parsed.ref + '[' + i + ']'));
-          refElem.addBefore(el);
-          if (parsed.index) {
-            el.ooScope.models[parsed.index] = i;
+      if (!isRepeating) {
+        isRepeating = true;
+        try {
+          oldVal = oldVal || 0;
+          var i;
+          if (val > oldVal) {
+            for (i = oldVal; i < val; i++) {
+              var el = elem.cloneNode(true);
+              el.removeClass('hidden');
+              el.attr('model.', el.attr('model.').replace('<M>',
+                isRange ? i + 1 : parsed.ref + '[' + i + ']'));
+              refElem.addBefore(el);
+              if (parsed.index) {
+                el.ooScope.models[parsed.index] = i;
+              }
+              el.ooScope = elem.ooScope;
+              $cheeta.compiler.compile(el);
+            }
+          } else if (val < oldVal) {
+            for (i = val; i < oldVal; i++) {
+              var toBeRemoved = refElem.prev();
+              toBeRemoved.remove();
+              // attr.fireElemRemoved(toBeRemoved);
+            }
           }
-          el.ooScope = elem.ooScope;
-          $cheeta.compiler.compile(el);
-        }
-      } else if (val < oldVal) {
-        for (i = val; i < oldVal; i++) {
-          var toBeRemoved = refElem.prev();
-          toBeRemoved.remove();
-          // attr.fireElemRemoved(toBeRemoved);
+        } finally {
+          isRepeating = false;
         }
       }
     }
 
     var oldLen;
     attr.watch(function (val) {
-      var isRange = val != null && !isNaN(parseFloat(val));
-      var len = isRange ? val : (val ? val.length : 0);
-      repeatElements(len, oldLen, isRange);
-      oldLen = len;
+      // setTimeout(function () {
+        var isRange = val != null && !isNaN(parseFloat(val));
+        var len = isRange ? val : (val ? val.length : 0);
+        repeatElements(len, oldLen, isRange);
+        oldLen = len;
+      // }, 0);
     }, parsed.ref);
     attr.watch(function (val) {
-      repeatElements(val, oldLen, false);
-      oldLen = val;
+      // setTimeout(function () {
+        repeatElements(val, oldLen, false);
+        oldLen = val;
+      // }, 0);
     }, parsed.ref + '.length');
   },
   parse: function (val) {
