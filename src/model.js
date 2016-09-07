@@ -6,23 +6,33 @@ $cheeta.Model = function (name, parent) {
   this.name = name;
   this.children = {};
   this.listeners = [];
+  if ($cheeta.debug) {
+    this.id = $cheeta.Model.id = ++$cheeta.Model.id || 1;
+  }
 };
 
 $cheeta.Model.prototype = {
+  iterateChildren: function (fn) {
+    for (var key in this.children) {
+      if (this.children.hasOwnProperty(key)) {
+        fn.call(this, this.children[key], key);
+      }
+    }
+  },
   child: function (name) {
     name = name.trim();
     var model = this.children[name];
     if (model === undefined) {
       model = new $cheeta.Model(name, this);
       this.children[name] = model;
+      // set value to it's own value to make sure it is intercepted
+      setTimeout(function (model) {
+        var value = model.getModelValue();
+        if (Object.isObject(value)) {
+          model.setModelValue(value);
+        }
+      }, 0, this);
     }
-    // set value to it's own value to make sure it is intercepted
-    setTimeout(function (model) {
-      var value = model.getModelValue();
-      if (Object.isObject(value)) {
-        model.setModelValue(value);
-      }
-    }, 0, this);
     return model;
   },
   makeChildren: function (tokens) {
@@ -66,12 +76,15 @@ $cheeta.Model.prototype = {
       var listener = this.listeners[i];
       listener.call(this, obj);
     }
-    for (var key in this.children) {
-      if (this.children.hasOwnProperty(key)) {
-        this.children[key].valueChange(obj && obj[key]);
+    this.iterateChildren(function (child, key) {
+      if (obj && !this.isReadable(obj ,key)) return;
+      child.valueChange(obj && obj[key]);
+    });
+    if (this.refs) {
+      for (var j = 0; j < this.refs.length; j++) {
+        this.refs[j].valueChange(obj);
       }
     }
-    // }
     return this;
   },
   addListener: function (callback) {
@@ -93,11 +106,9 @@ $cheeta.Model.prototype = {
     if (!this.deleted) {
       this.deleted = true;
       if (this.parent) delete this.parent.children[this.name];
-      for (var key in this.children) {
-        if (this.children.hasOwnProperty(key)) {
-          this.children[key].delete();
-        }
-      }
+      this.iterateChildren(function (child) {
+        child.delete();
+      });
       if (this.refs) {
         for (var i = 0; i < this.refs.length; i++) {
           this.refs[i].delete();
@@ -121,12 +132,26 @@ $cheeta.Model.prototype = {
     }
     return obj;
   },
+  isReadable: function(obj, key) {
+    var desc = Object.getOwnPropertyDescriptor(obj, key);
+    return desc && desc.writable;
+  },
   interceptAllChildren: function (obj) {
     if (Object.isObject(obj)) {
       obj = this.intercept(obj);
-      for (var key in this.children) {
-        if (this.children.hasOwnProperty(key)) {
-          obj[key] = this.children[key].interceptAllChildren(obj[key]);
+      this.iterateChildren(function (child, key) {
+        if (!this.isReadable(obj ,key)) return;
+        var val = child.interceptAllChildren(obj[key]);
+        if (val !== obj[key]) {
+          $cheeta.Model.surpressValueChange = true;
+          obj[key] = val;
+          $cheeta.Model.surpressValueChange = false;
+        }
+      });
+      if (this.refs) {
+        for (var i = 0; i < this.refs.length; i++) {
+          var refModel = this.refs[i];
+          refModel.interceptAllChildren(obj);
         }
       }
     }
@@ -159,6 +184,7 @@ $cheeta.Model.prototype = {
 $cheeta.Model.ProxyHandler = function () {
   this.models = [];
 };
+$cheeta.Model.surpressValueChange = false;
 $cheeta.Model.ProxyHandler.prototype = {
   set: function (base, prop, value) {
     if (prop === '__ooModel__') {
@@ -166,15 +192,17 @@ $cheeta.Model.ProxyHandler.prototype = {
     } else {
       console.log('set', prop, base[prop], value);
       base[prop] = value;
-      for (var i = 0; i < this.models.length; i++) {
-        var m = this.models[i];
-        if (m.deleted) {
-          this.models.splice(i--, 1);
-          continue;
-        }
-        if (m.children[prop]) {
-          base[prop] = m.children[prop].interceptAllChildren(base[prop]);
-          m.children[prop].valueChange(base[prop]);
+      if (!$cheeta.Model.surpressValueChange) {
+        for (var i = 0; i < this.models.length; i++) {
+          var m = this.models[i];
+          if (m.deleted) {
+            this.models.splice(i--, 1);
+            continue;
+          }
+          if (m.children[prop]) {
+            base[prop] = m.children[prop].interceptAllChildren(base[prop]);
+            m.children[prop].valueChange(base[prop]);
+          }
         }
       }
     }
@@ -198,7 +226,7 @@ $cheeta.Model.ProxyHandler.prototype = {
   }
 };
 
-$cheeta.Model.ArrayHandlerProto = Array.prototype;
+// $cheeta.Model.ArrayHandlerProto = Array.prototype;
 // $cheeta.Model.ArrayHandlerProto.push
 
 // (function () {
@@ -275,7 +303,7 @@ $cheeta.Future = function (fn, delay, thisArg) {
           // console.log('one future complete', self.fns.length, results.length);
           if (results.length === self.fns.length) {
             // console.log('All futures complete');
-            self.afterFn.call(thisArg, results.length === 1 ? results[0] : results);
+            if (self.afterFn) self.afterFn.call(thisArg, results.length === 1 ? results[0] : results);
           }
         }
       };
@@ -312,7 +340,8 @@ $cheeta.runFutures = function (after) {
       eval(expr);
     }
   }
-  futures.run().after(function (result) {
+  var f = futures.run();
+  if (after) f.after(function (result) {
     after(result);
   });
 };

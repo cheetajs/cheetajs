@@ -60,6 +60,10 @@ $cheeta.Attribute = function (elem, name, value) {
   this.name = name;
   this.value = value;
   this.elem = elem;
+  this.parsedMap = {};
+  if (elem.getAttribute && elem.getAttribute(name)) {
+    elem.attributes[name].ooAttr = this;
+  }
 };
 $cheeta.Attribute.prototype = {
   get key() {
@@ -72,72 +76,56 @@ $cheeta.Attribute.prototype = {
     }
     return expr;
   },
-  parseModels: function (expr, fn, returnChildModels) {
-    var attr = this;
-    expr = this.fixExpr(expr);
-    return $cheeta.parser.parse(expr, function (tokens) {
+  parseModels: function (expr) {
+    if (this.parsedMap[expr]) return this.parsedMap[expr];
+    var attr = this, i = 0, result = {models: []};
+    result.expr = $cheeta.parser.parse(expr, function (tokens) {
       if (!tokens.length) return false;
       var scope = attr.findReferredScope(attr.elem.ooScope, tokens[0]);
       var baseModel = scope.models[tokens[0]];
       if (!baseModel) return false;
-      var model;
-      if (returnChildModels) {
-        model = baseModel.makeChildren(tokens);
-      }
-      return fn(baseModel, tokens, model);
+      var model = baseModel.makeChildren(tokens);
+      result.models.push(model);
+      var key = '__oo__' + i++;
+      return key;
     });
+    this.parsedMap[expr] = result;
+    return result;
   },
   watch: function (fn, expr) {
     var attr = this;
+    expr = this.fixExpr(expr);
     var updateFn = function () {
-      fn.call(this, attr.evaluate(expr));
+      fn.call(this, attr.evaluate(expr), $cheeta.Model.currentEvent);
     };
-    this.parseModels(expr, function (baseModel, tokens, model) {
-      model.addListener(updateFn);
-      return false;
-    }, true);
-    // updateFn();
+    var models = this.parseModels(expr).models;
+    for (var i = 0; i < models.length; i++) {
+      models[i].addListener(updateFn);
+    }
+    if (!models.length) {
+      updateFn();
+    }
   },
   findReferredScope: function (scope, prop) {
     return scope ? ((scope.models[prop] && scope) || this.findReferredScope(scope.parent, prop))
       : window.ooScope;
-  },
-  setModelValue: function (value, expr) {
-    var tokens = $cheeta.parser.toTokens(this.fixExpr(expr));
-    var scope = this.findReferredScope(this.elem.ooScope, tokens[0]);
-    var model = scope.models[tokens[0]];
-    this.getModelValue(model, tokens.slice(0, tokens.length - 1), true)[tokens[tokens.length - 1]] = value;
-  },
-  getModelValue: function (model, tokens) {
-    var val;
-    if (model && model.baseModel) {
-      val = this.getModelValue(model.baseModel, model.refTokens);
-    } else {
-      val = eval(tokens[0]);
-    }
-    for (var i = 1; i < tokens.length; i++) {
-      if (!val) {
-        return undefined;
-      }
-      val = val[tokens[i]];
-    }
-    return val;
   },
   attr: function (name) {
     return new $cheeta.Attribute(this.elem, name, this.getAttribute(name) || this.getAttribute(name + '.') || this.getAttribute('data-' + name + '.'));
   },
   evaluate: function (expr, params) {
     params = params || {};
-    var attr = this, i = 1;
-    var resolvedExpr = this.parseModels(expr, function (baseModel, tokens) {
-      var key = '__oo__' + i++;
-      params[key] = attr.getModelValue(baseModel, tokens);
-      return key;
-    });
+    expr = this.fixExpr(expr);
+    var parseResult = this.parseModels(expr);
+    for (var j = 0; j < parseResult.models.length; j++) {
+      var m = parseResult.models[j];
+      var key = '__oo__' + j;
+      params[key] = m.getModelValue();
+    }
     var fn;
     //todo try to define only the vars that are used in this model ref
     //todo have more descriptive error in case script is failing
-    var escapedExpr = resolvedExpr.replace(/'/g, '\\\'');
+    var escapedExpr = parseResult.expr.replace(/'/g, '\\\'');
     var keys = Object.keys(params);
     eval('var fn = function(' + keys.join(',') + '){return eval(\'' + escapedExpr + '\');};');
     var paramValues = keys.map(function (k) {
@@ -155,7 +143,28 @@ $cheeta.Attribute.prototype = {
       // throw e;
       return undefined;
     }
+  },
+  setModelValue: function (value, expr) {
+    var models = this.parseModels(this.fixExpr(expr)).models;
+    for (var i = 0; i < models.length; i++) {
+      models[i].setModelValue(value);
+    }
   }
+  // getModelValue: function (model, tokens) {
+  //   var val;
+  //   if (model && model.baseModel) {
+  //     val = this.getModelValue(model.baseModel, model.refTokens);
+  //   } else {
+  //     val = eval(tokens[0]);
+  //   }
+  //   for (var i = 1; i < tokens.length; i++) {
+  //     if (!val) {
+  //       return undefined;
+  //     }
+  //     val = val[tokens[i]];
+  //   }
+  //   return val;
+  // },
 };
 
 $cheeta.future(function () {

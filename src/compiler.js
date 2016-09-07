@@ -1,13 +1,12 @@
 $cheeta.compiler = {
-  recursiveCompile: function (node, scope, skipSiblings, skipNode) {
+  recursiveCompile: function (node, scope, skipNode) {
     if (node) {
-      var skipChildren;
-      if (!skipNode && !node.isTemplatePlaceHolder) {
+      if (!skipNode) {
         if (node.nodeType === 1) {
           if (node.tagName.toLowerCase() === 'script') {
             if (node.getAttribute('id') && node.getAttribute('type').indexOf('template') > -1) {
               $cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
-              skipChildren = true;
+              node.isTemplatePlaceHolder = true;
             }
           }
           this.linkDirectives(node, scope);
@@ -15,11 +14,11 @@ $cheeta.compiler = {
           node = this.replaceCurly(node);
         }
       }
-      if (!skipChildren) {
-        this.recursiveCompile(node.firstChild, node.ooScope || scope);
-      }
-      if (!skipSiblings) {
-        this.recursiveCompile(node.nextSibling, scope);
+      if (!node.isTemplatePlaceHolder) {
+        for (var i = 0; i < node.childNodes.length; i++) {
+          var childNode = node.childNodes[i];
+          this.recursiveCompile(childNode, node.ooScope || scope);
+        }
       }
     }
   },
@@ -72,7 +71,7 @@ $cheeta.compiler = {
   },
   doCompile: function (elem, skipNode) {
     elem.addClass('oo-invisible');
-    this.recursiveCompile(elem, this.getScope(elem), true, skipNode);
+    this.recursiveCompile(elem, this.getScope(elem), skipNode);
     $cheeta.runFutures(function () {
       elem.removeClass('oo-invisible');
     });
@@ -87,6 +86,7 @@ $cheeta.compiler = {
     return (elem && (elem.ooScope || this.getScope(elem.parentElement))) || window.ooScope;
   }
 };
+window.M = {};
 window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
     $cheeta.isInitialized = true;
@@ -95,7 +95,10 @@ window.addEventListener('load', function () {
     // $cheeta.rootModel.value = $cheeta.rootModel.intercept(window.M = {});
     // window.ooScope = {models: {'M': $cheeta.rootModel}};
     $cheeta.compiler.linkDirective(window, 'model', 'M: window.M');
-    $cheeta.Model.root = window.M = window.ooScope.models.M.intercept({});
+    $cheeta.Model.root = window.M = window.ooScope.models.M.intercept(window.M);
+    $cheeta.compiler.linkDirective(window, 'watch', 'M.ooDebug: $cheeta.debugger.addPanel(M.ooDebug)');
+    window.M.ooDebug = window.M.ooDebug;
     $cheeta.compiler.compile(document.documentElement);
   }
 }, false);
+document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');

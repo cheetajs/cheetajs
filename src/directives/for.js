@@ -5,8 +5,6 @@ $cheeta.directive.add({
   isTemplate: true,
   order: 100,
   link: function (elem, attr) {
-    var refElem = document.createComment(elem.outerHTML);
-    elem.addAfter(refElem);
     var parsed = this.parse(attr.value);
     elem.removeAttr('for.');
     elem.attr('model.', parsed.variable + ':<M>;' + (elem.attr('model.') || ''));
@@ -26,7 +24,7 @@ $cheeta.directive.add({
               el.removeClass('hidden');
               el.attr('model.', el.attr('model.').replace('<M>',
                 isRange ? i + 1 : parsed.ref + '[' + i + ']'));
-              refElem.addBefore(el);
+              elem.addBefore(el);
               if (parsed.index) {
                 el.ooScope.models[parsed.index] = i;
               }
@@ -35,7 +33,7 @@ $cheeta.directive.add({
             }
           } else if (val < oldVal) {
             for (i = val; i < oldVal; i++) {
-              var toBeRemoved = refElem.prev();
+              var toBeRemoved = elem.prev();
               toBeRemoved.remove();
               // attr.fireElemRemoved(toBeRemoved);
             }

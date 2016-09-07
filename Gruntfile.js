@@ -10,7 +10,10 @@ module.exports = function(grunt) {
     		        'src/http.js', 'src/api.js', 'src/interceptor.js',
     		        'src/directives/*.js', 'src/hash.js', 'src/filters.js'],
     		dest: 'dist/<%= pkg.name %>.js'
-    	}
+    	},
+    	debug: {
+    	  src: ['src/debug.js'], dest: 'dist/<%= pkg.name %>-debug.js'
+      }
     },
     uglify: {
       options: {
@@ -19,7 +22,8 @@ module.exports = function(grunt) {
       build: {
     	  files: {
     		  'dist/<%= pkg.name %>-shim.min.js': 'src/<%= pkg.name %>-shim.js',
-    		  'dist/<%= pkg.name %>.min.js': 'dist/<%= pkg.name %>.js' 
+    		  'dist/<%= pkg.name %>.min.js': 'dist/<%= pkg.name %>.js',
+    		  'dist/<%= pkg.name %>-debug.min.js': 'dist/<%= pkg.name %>-debug.js'
     	  }
       }
     },

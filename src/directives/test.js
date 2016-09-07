@@ -1,7 +1,7 @@
 $cheeta.directive.add({
     name: 'test',
     order: 10000,
-    link: function(elem, attr, allAttr) {
+    link: function(elem, attr) {
         elem.addClass('test');
         var _this = this;
         $cheeta.future(function() {
@@ -25,7 +25,7 @@ $cheeta.directive.add({
                     }
                 }
             }
-        }, allAttr('delay').modelValue() || 0);
+        }, attr.attr('delay').evaluate() || 0);
     },
     showError: function(elem, attr, val) {
         //todo parse the test expr and eval the Is.eq params;

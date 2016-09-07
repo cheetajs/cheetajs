@@ -1,25 +1,14 @@
 $cheeta.directive.add({
   name: 'model',
   order: 200,
-  id: 1,
-  linkModelToParentFn: function (model) {
-    return function (baseModel, tokens, refModel) {
-      model.refTokens = tokens;
-      model.baseModel = baseModel;
-      model.refModel = refModel;
-      refModel.refs = refModel.refs || [];
-      refModel.refs.push(model);
-      refModel.addListener(function (obj) {
-        model.intercept(obj);
-        model.valueChange(obj);
-      });
-    };
-  },
   link: function (elem, attr) {
     //TODO handle app1['myapp,yourapp']
     var modelDef = attr.value.split(/ *[;] */g);
 
-    elem.ooScope = {models: {}, parent: elem.ooScope, id: this.id++};
+    elem.ooScope = {models: {}, parent: elem.ooScope, elem: elem};
+    if ($cheeta.debug) {
+      elem.ooScope.id = this.id = ++this.id || 1;
+    }
 
     for (var i = 0; i < modelDef.length; i++) {
       if (modelDef[i] === '') continue;
@@ -32,10 +21,14 @@ $cheeta.directive.add({
       }
 
       var model = new $cheeta.Model(as);
-      attr.parseModels(ref, this.linkModelToParentFn(model), true);
+      var refModel = attr.parseModels(ref).models[0];
+      if (refModel) {
+        model.refModel = refModel;
+        refModel.refs = refModel.refs || [];
+        refModel.refs.push(model);
+      }
       elem.ooScope.__last__ = as;
       elem.ooScope.models[as] = model;
-      // model.valueChange();
     }
   }
 });

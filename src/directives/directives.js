@@ -1,4 +1,3 @@
-document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');
 $cheeta.directive.add({
   name: 'watch*',
   link: function (elem, attr) {
@@ -18,7 +17,9 @@ $cheeta.directive.add({
 $cheeta.directive.add({
   name: 'value',
   link: function (elem, attr) {
-    attr.watch(function (val) {
+    attr.watch(function (val, e) {
+      // if same element bind event triggers this watch ignore it
+      if (e && elem.ooCurrentEvent === e) return;
       if (elem.type && elem.type.toLowerCase() === 'checkbox') {
         elem.checked = val;
       } else if (elem.value !== val) {
@@ -33,6 +34,7 @@ $cheeta.directive.add({
   link: function (elem, attr) {
     var split = attr.value.split(':');
     var modelExpr = split[0];
+    var onChangeFn = split[1];
     $cheeta.compiler.linkDirective(elem, 'value.', modelExpr.split(',')[0], attr.scope);
     // $cheeta.directive.adds.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
     function elemValue() {
@@ -47,11 +49,14 @@ $cheeta.directive.add({
     }
 
     //todo exclude keys that don't edit like arrow keys
-    elem.on('change keydown keyup', function () {
-      attr.setModelValue(elemValue(), modelExpr);
+    elem.on('change keydown keyup', function (e) {
+      Oo.Model.currentEvent = elem.ooCurrentEvent = e;
+      attr.setModelValue(elemValue());
       if (split.length > 1) {
-        attr.evaluate(split[1]);
+        attr.evaluate(onChangeFn);
       }
+      delete Oo.Model.currentEvent;
+      delete elem.ooCurrentEvent;
     });
   }
 });
