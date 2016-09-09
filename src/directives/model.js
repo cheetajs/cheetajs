@@ -21,8 +21,9 @@ $cheeta.directive.add({
       }
 
       var model = new $cheeta.Model(as);
-      var refModel = attr.parseModels(ref).models[0];
-      if (refModel) {
+      var parseRes = attr.parseModels(ref);
+      if (parseRes.length) {
+        var refModel = parseRes[0].model;
         model.refModel = refModel;
         refModel.refs = refModel.refs || [];
         refModel.refs.push(model);

@@ -51,7 +51,7 @@ $cheeta.directive.add({
     //todo exclude keys that don't edit like arrow keys
     elem.on('change keydown keyup', function (e) {
       Oo.Model.currentEvent = elem.ooCurrentEvent = e;
-      attr.setModelValue(elemValue());
+      attr.setModelValue(elemValue(), modelExpr);
       if (split.length > 1) {
         attr.evaluate(onChangeFn);
       }
@@ -67,6 +67,16 @@ $cheeta.directive.add({
       elem.innerHTML = '';
       elem.appendChild(document.createTextNode(val == null ? '' : val));
     });
+  }
+});
+$cheeta.directive.add({
+  name: 'const',
+  link: function (elem, attr) {
+    setTimeout(function () {
+      var val = attr.evaluate();
+      elem.innerHTML = '';
+      elem.appendChild(document.createTextNode(val == null ? '' : val));
+    }, 0);
   }
 });
 $cheeta.directive.add({

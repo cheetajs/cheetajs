@@ -26,12 +26,16 @@ $cheeta.Model.prototype = {
       model = new $cheeta.Model(name, this);
       this.children[name] = model;
       // set value to it's own value to make sure it is intercepted
-      setTimeout(function (model) {
-        var value = model.getModelValue();
-        if (Object.isObject(value)) {
-          model.setModelValue(value);
-        }
-      }, 0, this);
+      // console.log('timeout value set', name, this.fullRef());
+      if (model.getModelValue() != null) {
+        $cheeta.future(function (model) {
+          // console.log('timeout called', model.fullRef());
+          var value = model.getModelValue();
+          if (Object.isObject(value)) {
+            model.setModelValue(value);
+          }
+        }, 0, model);
+      }
     }
     return model;
   },
@@ -77,8 +81,7 @@ $cheeta.Model.prototype = {
       listener.call(this, obj);
     }
     this.iterateChildren(function (child, key) {
-      if (obj && !this.isReadable(obj ,key)) return;
-      child.valueChange(obj && obj[key]);
+      child.valueChange(obj && obj.hasOwnProperty(key) && obj[key]);
     });
     if (this.refs) {
       for (var j = 0; j < this.refs.length; j++) {
@@ -126,26 +129,22 @@ $cheeta.Model.prototype = {
         //   val[methodName] = this.interceptArrayFn(m, val[methodName]);
         // }
         // }
+        console.log('new object created', obj);
         obj = new Proxy(obj, handler);
       }
       obj.__ooModel__ = this;
     }
     return obj;
   },
-  isReadable: function(obj, key) {
-    var desc = Object.getOwnPropertyDescriptor(obj, key);
-    return desc && desc.writable;
-  },
   interceptAllChildren: function (obj) {
     if (Object.isObject(obj)) {
       obj = this.intercept(obj);
       this.iterateChildren(function (child, key) {
-        if (!this.isReadable(obj ,key)) return;
-        var val = child.interceptAllChildren(obj[key]);
-        if (val !== obj[key]) {
-          $cheeta.Model.surpressValueChange = true;
-          obj[key] = val;
-          $cheeta.Model.surpressValueChange = false;
+        if (obj.hasOwnProperty(key)) {
+          var val = child.interceptAllChildren(obj[key]);
+          if (val !== obj[key]) {
+            obj[key] = {value: val, __ooUpdateInterceptedVal__: true};
+          }
         }
       });
       if (this.refs) {
@@ -179,6 +178,16 @@ $cheeta.Model.prototype = {
         }
       }
     };
+  },
+  allChildren: function () {
+    var models = [];
+    this.iterateChildren(function (child) {
+      models = models.concat(child.allChildren());
+      if (!Object.keys(child.children).length) {
+        models.push(child);
+      }
+    });
+    return models;
   }
 };
 $cheeta.Model.ProxyHandler = function () {
@@ -186,23 +195,30 @@ $cheeta.Model.ProxyHandler = function () {
 };
 $cheeta.Model.surpressValueChange = false;
 $cheeta.Model.ProxyHandler.prototype = {
+  get: function (base, prop) {
+    // needed for accessing not hasOwnProperty values like attribute.name
+    return base[prop];
+  },
   set: function (base, prop, value) {
     if (prop === '__ooModel__') {
       if (this.models.indexOf(value) === -1) this.models.push(value);
     } else {
-      console.log('set', prop, base[prop], value);
+      if (value && value.__ooUpdateInterceptedVal__) {
+        base[prop] = value.value;
+        return true;
+      }
       base[prop] = value;
-      if (!$cheeta.Model.surpressValueChange) {
-        for (var i = 0; i < this.models.length; i++) {
-          var m = this.models[i];
-          if (m.deleted) {
-            this.models.splice(i--, 1);
-            continue;
-          }
-          if (m.children[prop]) {
-            base[prop] = m.children[prop].interceptAllChildren(base[prop]);
-            m.children[prop].valueChange(base[prop]);
-          }
+      if (prop.indexOf('cars') > -1)
+        console.log('set', prop, base[prop], value);
+      for (var i = 0; i < this.models.length; i++) {
+        var m = this.models[i];
+        if (m.deleted) {
+          this.models.splice(i--, 1);
+          continue;
+        }
+        if (m.children[prop]) {
+          base[prop] = m.children[prop].interceptAllChildren(base[prop]);
+          m.children[prop].valueChange(base[prop]);
         }
       }
     }
@@ -268,80 +284,4 @@ $cheeta.watch = function (modelExpr, fn) {
   elem.setAttribute('watch.', modelExpr + ':' + '$cheeta.watchFns[' + ($cheeta.watchFns.length - 1) + ']()');
   document.body.appendChild(elem);
   $cheeta.compiler.compile(elem, [$cheeta.Model.root]);
-};
-
-$cheeta.Future = function (fn, delay, thisArg) {
-  this.afterFn = null;
-  this.fns = Object.isArray(fn) ? fn : (fn ? [fn] : []);
-  var self = this;
-  this.add = function (fn) {
-    if (fn instanceof $cheeta.Future) {
-      self.fns = self.fns.concat(fn.fns);
-    } else {
-      self.fns.push(fn);
-    }
-  };
-  this.run = function () {
-    if (!self.fns.length) {
-      setTimeout(function () {
-        self.afterFn.call(thisArg);
-      }, 0);
-      return self;
-    }
-    var results = [];
-
-    function futureRun(fn) {
-      return function () {
-        try {
-          results.push(fn.apply(thisArg, arguments));
-        } catch (e) {
-          if (console.error) {
-            console.error(e.message, e);
-          }
-          results.push(e);
-        } finally {
-          // console.log('one future complete', self.fns.length, results.length);
-          if (results.length === self.fns.length) {
-            // console.log('All futures complete');
-            if (self.afterFn) self.afterFn.call(thisArg, results.length === 1 ? results[0] : results);
-          }
-        }
-      };
-    }
-
-    for (var i = 0; i < self.fns.length; i++) {
-      setTimeout(futureRun(self.fns[i]), delay || 0);
-    }
-    return self;
-  };
-  this.after = function (fn) {
-    self.afterFn = fn;
-  };
-};
-
-$cheeta.future = function (future, delay) {
-  $cheeta.future.evals.push(new $cheeta.Future(future, delay || 0));
-  // $cheeta.future.evals.push(delay ? new $cheeta.Future(future, delay) : future);
-};
-
-$cheeta.future.evals = $cheeta.future.evals || [];
-
-$cheeta.runFutures = function (after) {
-  var runs = $cheeta.future.evals;
-  $cheeta.future.evals = [];
-  var futures = new $cheeta.Future();
-  for (var i = 0; i < runs.length; i++) {
-    var expr = runs[i];
-    if (expr instanceof $cheeta.Future) {
-      futures.add(expr);
-    } else if (Object.isFunction(expr)) {
-      expr();
-    } else {
-      eval(expr);
-    }
-  }
-  var f = futures.run();
-  if (after) f.after(function (result) {
-    after(result);
-  });
 };

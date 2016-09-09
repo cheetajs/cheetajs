@@ -76,17 +76,21 @@ $cheeta.Attribute.prototype = {
     }
     return expr;
   },
-  parseModels: function (expr) {
+  parseModels: function (expr, baseOnly) {
     if (this.parsedMap[expr]) return this.parsedMap[expr];
-    var attr = this, i = 0, result = {models: []};
-    result.expr = $cheeta.parser.parse(expr, function (tokens) {
+    var attr = this, i = 0, result = [];
+    console.log('parsing', expr);
+    result.expr = $cheeta.parser.parse(expr, baseOnly, function (tokens, hasFn) {
       if (!tokens.length) return false;
+      if (!tokens[0].length) tokens[0] = attr.elem.ooScope.__last__;
       var scope = attr.findReferredScope(attr.elem.ooScope, tokens[0]);
-      var baseModel = scope.models[tokens[0]];
-      if (!baseModel) return false;
-      var model = baseModel.makeChildren(tokens);
-      result.models.push(model);
-      var key = '__oo__' + i++;
+      var model = scope.models[tokens[0]];
+      if (!model) return false;
+      if (!baseOnly) {
+        model = model.makeChildren(tokens);
+      }
+      var key = baseOnly ? tokens[0] : '__oo__' + i++;
+      result.push({model: model, key: key, hasFn: hasFn});
       return key;
     });
     this.parsedMap[expr] = result;
@@ -98,11 +102,11 @@ $cheeta.Attribute.prototype = {
     var updateFn = function () {
       fn.call(this, attr.evaluate(expr), $cheeta.Model.currentEvent);
     };
-    var models = this.parseModels(expr).models;
-    for (var i = 0; i < models.length; i++) {
-      models[i].addListener(updateFn);
+    var modelList = this.parseModels(expr);
+    for (var i = 0; i < modelList.length; i++) {
+      modelList[i].model.addListener(updateFn);
     }
-    if (!models.length) {
+    if (!modelList.length) {
       updateFn();
     }
   },
@@ -115,17 +119,17 @@ $cheeta.Attribute.prototype = {
   },
   evaluate: function (expr, params) {
     params = params || {};
-    expr = this.fixExpr(expr);
-    var parseResult = this.parseModels(expr);
-    for (var j = 0; j < parseResult.models.length; j++) {
-      var m = parseResult.models[j];
-      var key = '__oo__' + j;
-      params[key] = m.getModelValue();
+    var modelList = this.parseModels(this.fixExpr(expr), true);
+    for (var j = 0; j < modelList.length; j++) {
+      var entry = modelList[j];
+      var modelValue = entry.model.getModelValue();
+      if (modelValue == null && entry.hasFn) return undefined;
+      params[entry.key] = modelValue;
     }
     var fn;
     //todo try to define only the vars that are used in this model ref
     //todo have more descriptive error in case script is failing
-    var escapedExpr = parseResult.expr.replace(/'/g, '\\\'');
+    var escapedExpr = modelList.expr.replace(/'/g, '\\\'');
     var keys = Object.keys(params);
     eval('var fn = function(' + keys.join(',') + '){return eval(\'' + escapedExpr + '\');};');
     var paramValues = keys.map(function (k) {
@@ -145,9 +149,9 @@ $cheeta.Attribute.prototype = {
     }
   },
   setModelValue: function (value, expr) {
-    var models = this.parseModels(this.fixExpr(expr)).models;
-    for (var i = 0; i < models.length; i++) {
-      models[i].setModelValue(value);
+    var res = this.parseModels(this.fixExpr(expr));
+    for (var i = 0; i < res.length; i++) {
+      res[i].model.setModelValue(value);
     }
   }
   // getModelValue: function (model, tokens) {
@@ -166,33 +170,6 @@ $cheeta.Attribute.prototype = {
   //   return val;
   // },
 };
-
-$cheeta.future(function () {
-  function fireRemove(el, removeSiblings) {
-    if (el) {
-      if (el.hasDirective) {
-        el.dispatchEvent(new CustomEvent($cheeta.directive.removeEventName, {'detail': {target: el}}));
-      }
-      fireRemove(el.firstElementChild, true);
-      if (removeSiblings) fireRemove(el.nextElementSibling, true);
-    }
-  }
-
-  var whatToObserve = {childList: true, subtree: true};
-  var mutationObserver = new MutationObserver(function (mutationRecords) {
-    for (var i = 0; i < mutationRecords.length; i++) {
-      var mutationRecord = mutationRecords[i];
-      if (mutationRecord.type === 'childList') {
-        if (mutationRecord.removedNodes.length > 0) {
-          for (var j = 0; j < mutationRecord.removedNodes.length; j++) {
-            fireRemove(mutationRecord.removedNodes[j]);
-          }
-        }
-      }
-    }
-  });
-  mutationObserver.observe(document.body, whatToObserve);
-});
 
 // attr.setValueForRef = function (val, ref) {
 //   var split = (ref || attr.value).split(/ *\. *| *\[ *| *\] */g);

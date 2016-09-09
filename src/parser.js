@@ -5,7 +5,8 @@ $cheeta.parser = {
     var map = [];
     ('abstract|else|instanceof|super|boolean|enum|int|switch|break|export|interface|synchronized|byte|extends|let|this|case|false|long|' +
     'throw|catch|final|native|throws|char|finally|new|transient|class|float|null|true|const|for|package|try|continue|function|private|typeof|debugger|goto|' +
-    'protected|var|default|if|public|void|delete|implements|return|volatile|do|import|short|while|double|in|static|with|window|document')
+    'protected|var|default|if|public|void|delete|implements|return|volatile|do|import|short|while|double|in|static|with|window|document|JSON|' +
+    'true|false|NaN|undefined|null|' + this.jsonPlaceHolder)
       .split('|').forEach(function (r) {
       map[r] = true;
     });
@@ -17,59 +18,51 @@ $cheeta.parser = {
     return ref.search(/\( *$/) > -1 ?
       Math.max(ref.lastIndexOf('.'), ref.lastIndexOf('['), 0) : ref.length;
   },
-  parse: function (ref, fn) {
-    function hasReserved(ref) {
-      var c = ref.charAt(0);
-      if (c === '.') {
-        return false;
-      }
-      // if (c.toUpperCase() === c || c === '$' || c === '_' || name === 'window' || name === 'document') {
-      //   return true;
-      // }
-      var i = ref.indexOf('.');
-      i = i === -1 ? ref.length : i;
-      return parser.reservedWords[ref.substring(0, i)] != null;
-    }
-
+  hasReserved: function (ref) {
+    return this.reservedWords[ref] != null;
+  },
+  jsonPlaceHolder: '__oo__J_',
+  parse: function (ref, baseOnly, fn) {
     var parser = this;
     var jsonObjs = [];
     ref = ref.replace(this.jsonRegExp, function (match) {
       jsonObjs.push(match);
-      return '$J';
+      return parser.jsonPlaceHolder;
     });
     ref = ref.replace(this.modelVarRegExp, function (match) {
-      if (match.charAt(0) === '\'' || match.charAt(0) === '"' || match === 'true' || match === 'false' ||
-        match === 'undefined' || match === 'null' || match === 'NaN' || !isNaN(match) || match === '$J') {
+      if (match.charAt(0) === '\'' || match.charAt(0) === '"' || !isNaN(match)) {
         return match;
       } else {
         var bracketIndex = match.length;
-
         match = match.replace(/\[ *([^0-9'"].*?)\]/g, function (m, $1, index) {
           parser.parse($1, fn);
           if (bracketIndex === match.length) {
             bracketIndex = index;
           }
         });
-        if (hasReserved(match)) {
+        var funcIndex = parser.functionPos(match.substring(0, bracketIndex));
+        var expr = match.substring(0, funcIndex);
+        var tokens = parser.toTokens(expr, baseOnly ? 1 : -1);
+        if (!tokens[0] || parser.hasReserved(tokens[0])) {
           return match;
         } else {
-          var funcIndex = parser.functionPos(match.substring(0, bracketIndex));
-          var expr = match.substring(0, funcIndex);
-          return (fn(parser.toTokens(expr)) || expr) + match.substring(funcIndex);
+          var callbackResult = fn(tokens, funcIndex < match.length);
+          return (callbackResult === false ? expr : (callbackResult + (baseOnly ? expr.substring(tokens[0].length) : ''))) +
+            match.substring(funcIndex);
         }
       }
     });
-    var i = 0;
-    ref = ref.replace(/\$J/, function () {
-      return jsonObjs[i++];
-    });
+    for (var i = 0; i < jsonObjs.length; i++) {
+      ref = ref.replace(parser.jsonPlaceHolder, jsonObjs[i]);
+    }
     return ref;
   },
-  toTokens: function (expr) {
-    return expr.split(/ *\. *| *\[ *| *\] */g).filter(function (el) {
-      return el.length !== 0;
+  tokenizeRegExp: / *\. *| *\[ *| *\] */g,
+  toTokens: function (expr, limit) {
+    return expr.split(this.tokenizeRegExp, limit).filter(function (el, i) {
+      return i === 0 || el.length !== 0;
     });
-  }
+  },
 };
 
 //	this.tokenizeAttrVal = function(val, onToken) {

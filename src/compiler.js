@@ -1,6 +1,7 @@
 $cheeta.compiler = {
   recursiveCompile: function (node, scope, skipNode) {
-    if (node) {
+    if (node && !node.ooCompiled) {
+      node.ooCompiled = true;
       if (!skipNode) {
         if (node.nodeType === 1) {
           if (node.tagName.toLowerCase() === 'script') {
@@ -11,7 +12,7 @@ $cheeta.compiler = {
           }
           this.linkDirectives(node, scope);
         } else if (node.nodeType === 3) {
-          node = this.replaceCurly(node);
+          this.replaceCurly(node, scope);
         }
       }
       if (!node.isTemplatePlaceHolder) {
@@ -22,20 +23,22 @@ $cheeta.compiler = {
       }
     }
   },
-  replaceCurly: function (node) {
+  replaceCurly: function (node, scope) {
     var txt = node.textContent;
     if (txt.indexOf('{{') === -1) return node;
-    txt = txt.replace(/\{\{(.*?)\}\}/g, function (h, c) {
-      return '<span text.="' + c + '"></span>';
+    txt = txt.replace(/\{\{(.*?)\}\}\}?/g, function (m, p) {
+      var isConst = p.charAt(0) === '{';
+      return '<span ' + (isConst ? 'const.' : 'text.') + '="' +
+        (isConst ? p.substring(1) : p) + '"></span>';
     });
-    var div = document.createElement('div'), firstChild;
+    var div = document.createElement('div');
     div.innerHTML = txt;
-    firstChild = div.firstChild;
     while (div.childNodes.length > 0) {
-      node.parentNode.insertBefore(div.childNodes[0], node);
+      var childNode = div.childNodes[0];
+      node.parentNode.insertBefore(childNode, node);
+      this.recursiveCompile(childNode, scope);
     }
     node.parentNode.removeChild(node);
-    return firstChild.previousSibling || firstChild.parentNode;
   },
   getDirectives: function (elem) {
     var directivs = [];
@@ -84,21 +87,45 @@ $cheeta.compiler = {
   },
   getScope: function (elem) {
     return (elem && (elem.ooScope || this.getScope(elem.parentElement))) || window.ooScope;
+  },
+  listenToElementRemoval: function () {
+    function fireRemove(el, removeSiblings) {
+      if (el) {
+        if (el.hasDirective) {
+          el.dispatchEvent(new CustomEvent($cheeta.directive.removeEventName, {'detail': {target: el}}));
+        }
+        fireRemove(el.firstElementChild, true);
+        if (removeSiblings) fireRemove(el.nextElementSibling, true);
+      }
+    }
+    var mutationObserver = new MutationObserver(function (mutationRecords) {
+      for (var i = 0; i < mutationRecords.length; i++) {
+        var mutationRecord = mutationRecords[i];
+        if (mutationRecord.type === 'childList') {
+          if (mutationRecord.removedNodes.length > 0) {
+            for (var j = 0; j < mutationRecord.removedNodes.length; j++) {
+              fireRemove(mutationRecord.removedNodes[j]);
+            }
+          }
+        }
+      }
+    });
+    mutationObserver.observe(document.body, {childList: true, subtree: true});
   }
 };
 window.M = {};
 window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
     $cheeta.isInitialized = true;
+    document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');
     $cheeta.hash.init();
     // $cheeta.rootModel = new $cheeta.Model('M');
     // $cheeta.rootModel.value = $cheeta.rootModel.intercept(window.M = {});
     // window.ooScope = {models: {'M': $cheeta.rootModel}};
     $cheeta.compiler.linkDirective(window, 'model', 'M: window.M');
     $cheeta.Model.root = window.M = window.ooScope.models.M.intercept(window.M);
-    $cheeta.compiler.linkDirective(window, 'watch', 'M.ooDebug: $cheeta.debugger.addPanel(M.ooDebug)');
-    window.M.ooDebug = window.M.ooDebug;
+    $cheeta.debugger.init();
     $cheeta.compiler.compile(document.documentElement);
+    $cheeta.compiler.listenToElementRemoval();
   }
 }, false);
-document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');
