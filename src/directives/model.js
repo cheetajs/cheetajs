@@ -5,9 +5,9 @@ $cheeta.directive.add({
     //TODO handle app1['myapp,yourapp']
     var modelDef = attr.value.split(/ *[;] */g);
 
-    elem.ooScope = {models: {}, parent: elem.ooScope, elem: elem};
+    elem._ooScope_ = {models: {}, parent: elem._ooScope_, elem: elem, last: elem._ooScope_  && elem._ooScope_.last};
     if ($cheeta.debug) {
-      elem.ooScope.id = this.id = ++this.id || 1;
+      elem._ooScope_.id = this.id = ++this.id || 1;
     }
 
     for (var i = 0; i < modelDef.length; i++) {
@@ -17,7 +17,7 @@ $cheeta.directive.add({
       var as = index > -1 ? modelDef[i].substring(0, index).trim() : null;
       if (!as) {
         as = ref;
-        ref = elem.ooScope.parent.__last__ + '.' + ref;
+        ref = elem._ooScope_.parent.last + '.' + ref;
       }
 
       var model = new $cheeta.Model(as);
@@ -28,8 +28,8 @@ $cheeta.directive.add({
         refModel.refs = refModel.refs || [];
         refModel.refs.push(model);
       }
-      elem.ooScope.__last__ = as;
-      elem.ooScope.models[as] = model;
+      elem._ooScope_.last = as;
+      elem._ooScope_.models[as] = model;
     }
   }
 });

@@ -122,15 +122,16 @@ $cheeta.Model.prototype = {
   intercept: function (obj) {
     if (obj) {
       if (!('__isOoProxy__' in obj)) {
-        var handler = new $cheeta.Model.ProxyHandler();
         // if (Object.isArray(obj)) {
         // for (var j = 0; j < this.arrayMethodNames.length; j++) {
         //   var methodName = this.arrayMethodNames[j];
         //   val[methodName] = this.interceptArrayFn(m, val[methodName]);
         // }
         // }
-        console.log('new object created', obj);
-        obj = new Proxy(obj, handler);
+        var origObj = obj;
+        obj = obj.__ooProxy__ || new Proxy(obj, new $cheeta.Model.ProxyHandler());
+        Object.defineProperty(origObj, '__ooProxy__', {value: obj});
+        origObj.__ooProxy__ = obj;
       }
       obj.__ooModel__ = this;
     }
@@ -156,29 +157,30 @@ $cheeta.Model.prototype = {
     }
     return obj;
   },
-  arrayMethodNames: ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse'],
-  interceptArrayFn: function (model, fn) {
-    return function () {
-      var oldLen = model.getValue().length;
-      try {
-        return fn.apply(this, arguments);
-      } finally {
-        model.valueChange();
-        var newLen = model.getValue().length;
-        if (newLen !== oldLen) {
-          if (newLen < oldLen) {
-            for (var i = newLen; i < oldLen; i++) {
-              model.children[i].delete();
-            }
-          }
-          var lengthModel = model.child('length', null, true);
-          lengthModel.prevValue = oldLen;
-          lengthModel.value = newLen;
-          lengthModel.valueChange();
-        }
-      }
-    };
-  },
+  // todo swap the childs in case for. array is sorted or spliced or shift/unshift
+  // arrayMethodNames: ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse'],
+  // interceptArrayFn: function (model, fn) {
+  //   return function () {
+  //     var oldLen = model.getValue().length;
+  //     try {
+  //       return fn.apply(this, arguments);
+  //     } finally {
+  //       model.valueChange();
+  //       var newLen = model.getValue().length;
+  //       if (newLen !== oldLen) {
+  //         if (newLen < oldLen) {
+  //           for (var i = newLen; i < oldLen; i++) {
+  //             model.children[i].delete();
+  //           }
+  //         }
+  //         var lengthModel = model.child('length', null, true);
+  //         lengthModel.prevValue = oldLen;
+  //         lengthModel.value = newLen;
+  //         lengthModel.valueChange();
+  //       }
+  //     }
+  //   };
+  // },
   allChildren: function () {
     var models = [];
     this.iterateChildren(function (child) {

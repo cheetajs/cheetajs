@@ -35,7 +35,7 @@ $cheeta.directive.add({
     var split = attr.value.split(':');
     var modelExpr = split[0];
     var onChangeFn = split[1];
-    $cheeta.compiler.linkDirective(elem, 'value.', modelExpr.split(',')[0], attr.scope);
+    $cheeta.compiler.linkDirectives(elem, 'value', modelExpr.split(',')[0], attr.scope);
     // $cheeta.directive.adds.get('value')[0].directive.link(elem, allAttr({name: attr.name, value: split[0].split(',')[0]}));
     function elemValue() {
       if (elem.type && elem.type.toLowerCase() === 'checkbox') {
@@ -109,13 +109,13 @@ $cheeta.directive.add({
     elem.addEventListener('mouseover', function () {
       if (!over) {
         over = true;
-        attr.setValue(over);
+        attr.setModelValue(over);
       }
     });
     elem.addEventListener('mouseleave', function () {
       if (over) {
         over = false;
-        attr.setValue(over);
+        attr.setModelValue(over);
       }
     });
   }
@@ -124,7 +124,7 @@ $cheeta.directive.add({
 $cheeta.directive.add({
   name: 'onaction',
   link: function (elem, attr) {
-    $cheeta.compiler.linkDirective(elem, 'onclick.onkeydown-space-enter.', attr.value);
+    $cheeta.compiler.linkDirectives(elem, 'onclick.onkeydown-space-enter', attr.value);
   }
 });
 
@@ -143,19 +143,21 @@ $cheeta.directive.add({
     });
   }
 });
-
+//default
 $cheeta.directive.add({
   name: '',
   link: function (elem, attr) {
-    var baseAttrName = attr.key;
-    attr.watch(function (val, prevVal) {
+    var baseAttrName = attr.key, prevVal;
+    attr.watch(function (val) {
       if (baseAttrName === 'class' || baseAttrName === 'style') {
         var delimiter = baseAttrName === 'class' ? ' ' : ';';
         var attrVal = elem.getAttribute(baseAttrName);
         if (attrVal && prevVal) {
           elem.setAttribute(baseAttrName, attrVal.replace(prevVal, val));
         } else {
-          elem.setAttribute(baseAttrName, attrVal + (attrVal ? delimiter : '') + val);
+          if (val) {
+            elem.setAttribute(baseAttrName, attrVal + (attrVal ? delimiter : '') + val);
+          }
         }
       } else if ((baseAttrName === 'disabled' || baseAttrName === 'multiple' || baseAttrName === 'required') &&
         val === false) {
@@ -165,6 +167,7 @@ $cheeta.directive.add({
       } else {
         elem.setAttribute(baseAttrName, val);
       }
+      prevVal = val;
     });
   }
 });

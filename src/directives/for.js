@@ -8,7 +8,7 @@ $cheeta.directive.add({
     var parsed = this.parse(attr.value);
     elem.removeAttr('for.');
     elem.attr('model.', parsed.variable + ':<M>;' + (elem.attr('model.') || ''));
-    elem.isTemplatePlaceHolder = true;
+    elem._ooIsTemplatePlaceHolder_ = true;
     elem.addClass('hidden');
 
     var isRepeating = false;
@@ -26,9 +26,9 @@ $cheeta.directive.add({
                 isRange ? i + 1 : parsed.ref + '[' + i + ']'));
               elem.addBefore(el);
               if (parsed.index) {
-                el.ooScope.models[parsed.index] = i;
+                el._ooScope_.models[parsed.index] = i;
               }
-              el.ooScope = elem.ooScope;
+              el._ooScope_ = elem._ooScope_;
               $cheeta.compiler.compile(el);
             }
           } else if (val < oldVal) {

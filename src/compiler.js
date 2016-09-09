@@ -1,24 +1,24 @@
 $cheeta.compiler = {
   recursiveCompile: function (node, scope, skipNode) {
-    if (node && !node.ooCompiled) {
-      node.ooCompiled = true;
+    if (node && (!node._ooCompiled_|| skipNode)) {
+      node._ooCompiled_ = true;
       if (!skipNode) {
         if (node.nodeType === 1) {
           if (node.tagName.toLowerCase() === 'script') {
             if (node.getAttribute('id') && node.getAttribute('type').indexOf('template') > -1) {
               $cheeta.templates[node.getAttribute('id')] = node.innerHTML || '';
-              node.isTemplatePlaceHolder = true;
+              node._ooIsTemplatePlaceHolder_ = true;
             }
           }
-          this.linkDirectives(node, scope);
+          this.linkDirectivesWithScope(node, scope);
         } else if (node.nodeType === 3) {
           this.replaceCurly(node, scope);
         }
       }
-      if (!node.isTemplatePlaceHolder) {
+      if (!node._ooIsTemplatePlaceHolder_) {
         for (var i = 0; i < node.childNodes.length; i++) {
           var childNode = node.childNodes[i];
-          this.recursiveCompile(childNode, node.ooScope || scope);
+          this.recursiveCompile(childNode, node._ooScope_ || scope);
         }
       }
     }
@@ -40,37 +40,33 @@ $cheeta.compiler = {
     }
     node.parentNode.removeChild(node);
   },
-  getDirectives: function (elem) {
-    var directivs = [];
-    for (var i = 0; i < elem.attributes.length; i++) {
-      var attr = elem.attributes[i];
+  getDirectives: function (elem, attrs) {
+    var directives = [];
+    for (var i = 0; i < attrs.length; i++) {
+      var attr = attrs[i];
       if (attr.name.endsWith('.')) {
-        var dirs = $cheeta.directive.getAll(attr.name);
-        for (var j = 0; j < dirs.length; j++) {
-          var dir = dirs[j];
-          dir.currAttr = attr;
-        }
-        directivs = directivs.concat(dirs);
+        var dirs = $cheeta.directive.getAll(attr);
+        directives = directives.concat(dirs);
       }
     }
-    directivs.sort(function (a, b) {
-      return (a.order || 1000) - (b.order || 1000);
+    directives.sort(function (a, b) {
+      return (a.directive.order || 1000) - (b.directive.order || 1000);
     });
-    return directivs;
+    return directives;
   },
-  linkDirectives: function (elem, scope) {
-    var directives = this.getDirectives(elem);
-    if (!directives) return false;
-    elem.ooScope = scope;
+  linkDirectivesWithScope: function (elem, scope) {
+    return this.linkDirectives(elem, undefined, undefined, scope);
+  },
+  linkDirectives: function (elem, name, value, scope) {
+    var directives = this.getDirectives(elem, name ? [{name: name + '.', value: value}] : elem.attributes);
+    if (!directives || !directives.length) return false;
+    elem._ooScope_ = elem._ooScope_ || scope;
     for (var i = 0; i < directives.length; i++) {
-      if (elem.isTemplatePlaceHolder) break;
+      if (elem._ooIsTemplatePlaceHolder_) break;
       var dir = directives[i];
-      dir.link(elem, new $cheeta.Attribute(elem, dir.currAttr.name, dir.currAttr.value));
+      dir.directive.link(elem, new $cheeta.Attribute(elem, dir.name, dir.value, dir.key));
     }
-  },
-  linkDirective: function (elem, name, value) {
-    var dir = $cheeta.directive.get(name);
-    return dir.link(elem, new $cheeta.Attribute(elem, name, value));
+    return true;
   },
   doCompile: function (elem, skipNode) {
     elem.addClass('oo-invisible');
@@ -86,7 +82,7 @@ $cheeta.compiler = {
     this.doCompile(elem, true);
   },
   getScope: function (elem) {
-    return (elem && (elem.ooScope || this.getScope(elem.parentElement))) || window.ooScope;
+    return (elem && (elem._ooScope_ || this.getScope(elem.parentElement))) || window._ooScope_;
   },
   listenToElementRemoval: function () {
     function fireRemove(el, removeSiblings) {
@@ -113,7 +109,6 @@ $cheeta.compiler = {
     mutationObserver.observe(document.body, {childList: true, subtree: true});
   }
 };
-window.M = {};
 window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
     $cheeta.isInitialized = true;
@@ -122,9 +117,10 @@ window.addEventListener('load', function () {
     // $cheeta.rootModel = new $cheeta.Model('M');
     // $cheeta.rootModel.value = $cheeta.rootModel.intercept(window.M = {});
     // window.ooScope = {models: {'M': $cheeta.rootModel}};
-    $cheeta.compiler.linkDirective(window, 'model', 'M: window.M');
-    $cheeta.Model.root = window.M = window.ooScope.models.M.intercept(window.M);
-    $cheeta.debugger.init();
+    window.M = function(v){console.log(v);};
+    $cheeta.compiler.linkDirectives(window, 'model', 'M: window.M');
+    $cheeta.Model.root = window.M = window._ooScope_.models.M.intercept(window.M);
+    $cheeta.debugger.init($cheeta.debug);
     $cheeta.compiler.compile(document.documentElement);
     $cheeta.compiler.listenToElementRemoval();
   }

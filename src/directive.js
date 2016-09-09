@@ -21,44 +21,40 @@ $cheeta.directive = {
     var all = this.getAll(name);
     return all.length ? all[0] : undefined;
   },
-  getAll: function (name) {
-    var dirs = [], i;
-    var split = name.toLowerCase().split('.');
-    if (split[split.length - 1] === '') {
-      split.pop();
-    }
-    for (i = 0; i < split.length; i++) {
-      var n = split[i], j = 0, ds = [];
-      if (n.indexOf('data-') === 0) {
-        n = n.substring('data-'.length);
-      }
+  getAll: function (attr) {
+    var allDirs = [];
+    var split = attr.name.substring(0, attr.name.length - 1).toLowerCase().split('.');
+    for (var i = 0; i < split.length; i++) {
+      var n = split[i], dirs = [];
+      n = n.replace(/^data-/, '');
       var directives = this.directives[n];
       if (directives) {
-        for (j = 0; j < directives.length; j++) {
-          ds.push(directives[j]);
+        for (var j = 0; j < directives.length; j++) {
+          dirs.push({name: attr.name, value: attr.value, key: n, directive: directives[j]});
         }
       }
-      if (!ds.length) {
-        for (j = 0; j < this.globals.length; j++) {
-          var g = this.globals[j].name;
-          if (n.replace(/^data-/, '').indexOf(g.substring(0, g.length - 1)) === 0) {
-            ds.push(this.globals[j]);
+      if (!dirs.length) {
+        for (var k = 0; k < this.globals.length; k++) {
+          var g = this.globals[k].name;
+          if (n.indexOf(g.substring(0, g.length - 1)) === 0) {
+            dirs.push({name: attr.name, value: attr.value, key: n, directive: this.globals[k]});
           }
         }
       }
-      dirs = dirs.concat(ds);
-    }
-    if (!dirs.length) {
-      for (i = 0; i < this.defaults.length; i++) {
-        dirs.push(this.defaults[i]);
+      if (!dirs.length) {
+        for (var l = 0; l < this.defaults.length; l++) {
+          dirs.push({name: attr.name, value: attr.value, key: n, directive: this.defaults[l]});
+        }
       }
+      allDirs = allDirs.concat(dirs);
     }
-    return dirs;
+    return allDirs;
   }
 };
-$cheeta.Attribute = function (elem, name, value) {
+$cheeta.Attribute = function (elem, name, value, key) {
   this.name = name;
   this.value = value;
+  this.key = key;
   this.elem = elem;
   this.parsedMap = {};
   if (elem.getAttribute && elem.getAttribute(name)) {
@@ -66,24 +62,20 @@ $cheeta.Attribute = function (elem, name, value) {
   }
 };
 $cheeta.Attribute.prototype = {
-  get key() {
-    return this.name.replace(/^data-/, '').replace(/\.$/, '');
-  },
   fixExpr: function (expr) {
     expr = (expr || this.value).trim();
-    if (expr.startsWith('.') && this.elem.ooScope.__last__) {
-      expr = this.elem.ooScope.__last__ + expr;
+    if (expr.startsWith('.') && this.elem._ooScope_.last) {
+      expr = this.elem._ooScope_.last + expr;
     }
     return expr;
   },
   parseModels: function (expr, baseOnly) {
     if (this.parsedMap[expr]) return this.parsedMap[expr];
     var attr = this, i = 0, result = [];
-    console.log('parsing', expr);
     result.expr = $cheeta.parser.parse(expr, baseOnly, function (tokens, hasFn) {
       if (!tokens.length) return false;
-      if (!tokens[0].length) tokens[0] = attr.elem.ooScope.__last__;
-      var scope = attr.findReferredScope(attr.elem.ooScope, tokens[0]);
+      if (!tokens[0].length) tokens[0] = attr.elem._ooScope_.last;
+      var scope = attr.findReferredScope(attr.elem._ooScope_, tokens[0]);
       var model = scope.models[tokens[0]];
       if (!model) return false;
       if (!baseOnly) {
@@ -106,13 +98,11 @@ $cheeta.Attribute.prototype = {
     for (var i = 0; i < modelList.length; i++) {
       modelList[i].model.addListener(updateFn);
     }
-    if (!modelList.length) {
-      updateFn();
-    }
+    updateFn();
   },
   findReferredScope: function (scope, prop) {
     return scope ? ((scope.models[prop] && scope) || this.findReferredScope(scope.parent, prop))
-      : window.ooScope;
+      : window._ooScope_;
   },
   attr: function (name) {
     return new $cheeta.Attribute(this.elem, name, this.getAttribute(name) || this.getAttribute(name + '.') || this.getAttribute('data-' + name + '.'));

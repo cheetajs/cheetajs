@@ -1,7 +1,7 @@
 $cheeta.debugger = {
   prevEl: null,
   capturing: false,
-  init: function () {
+  init: function (val) {
     $cheeta.templates['oo-debugger-panel'] =
       '<div model.="debug: M.ooDebugger; el: debug.elem">' +
       '<div>Click anywhere and hold down ctrl or alt to capture</div>' +
@@ -15,8 +15,8 @@ $cheeta.debugger = {
       '.oo-debugger .oo-panel{transform: rotate(-180deg);position: absolute;bottom: 15px;right: 5px;' +
       'font-family: Arial,"Helvetica Neue",Helvetica,sans-serif;font-size:12px;}' +
       '.oo-hover-elem {outline: 1px solid red;}');
-    $cheeta.compiler.linkDirective(window, 'watch', 'M.ooDebug: $cheeta.debugger.addPanel(M.ooDebug)');
-    window.M.ooDebug = window.M.ooDebug;
+    $cheeta.compiler.linkDirectives(window, 'watch', 'M.ooDebug: $cheeta.debugger.addPanel(M.ooDebug)');
+    window.M.ooDebug = val;
   },
   keyListener: function (e) {
     if ((e.which === 17 || e.which === 18) && e.type === 'keydown') {
@@ -29,7 +29,8 @@ $cheeta.debugger = {
     if (!this.capturing) {
       return;
     }
-    var elem = document.elementFromPoint(e.pageX, e.pageY);
+    var elem = document.elementFromPoint(e.pageX - window.pageXOffset, e.pageY - window.pageYOffset);
+    // var elem = document.elementFromPoint(e.pageX, e.pageY);
     if (!elem || elem === this.prevEl || window.ooDebugPanel === elem || window.ooDebugPanel.contains(elem)) return;
     if (this.prevEl) this.prevEl.removeClass('oo-hover-elem');
     this.prevEl = elem;

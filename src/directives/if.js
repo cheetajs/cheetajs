@@ -5,7 +5,7 @@ $cheeta.directive.add({
 	link: function (elem, attr) {
 		elem.removeAttr('if.');
 		var addedElem;
-		elem.isTemplatePlaceHolder = true;
+		elem._ooIsTemplatePlaceHolder_ = true;
 		elem.addClass('hidden');
 
 		attr.watch(function(val) {

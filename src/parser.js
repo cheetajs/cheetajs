@@ -43,7 +43,7 @@ $cheeta.parser = {
         var funcIndex = parser.functionPos(match.substring(0, bracketIndex));
         var expr = match.substring(0, funcIndex);
         var tokens = parser.toTokens(expr, baseOnly ? 1 : -1);
-        if (!tokens[0] || parser.hasReserved(tokens[0])) {
+        if (!tokens.length || (tokens.length === 1 && !tokens[0]) || parser.hasReserved(tokens[0])) {
           return match;
         } else {
           var callbackResult = fn(tokens, funcIndex < match.length);
