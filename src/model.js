@@ -1,6 +1,3 @@
-/*jshint -W020 */
-window.$cheeta = window.Oo = window.$cheeta || {};
-
 $cheeta.Model = function (name, parent) {
   this.parent = parent;
   this.name = name;
@@ -21,22 +18,25 @@ $cheeta.Model.prototype = {
   },
   child: function (name) {
     name = name.trim();
-    var model = this.children[name];
+    var model = this.children[name], isNewModelCreated;
     if (model === undefined) {
       model = new $cheeta.Model(name, this);
       this.children[name] = model;
+      // this.interceptChild(this.getModelValue(), name);
+      isNewModelCreated = true;
       // set value to it's own value to make sure it is intercepted
       // console.log('timeout value set', name, this.fullRef());
-      if (model.getModelValue() != null) {
-        $cheeta.future(function (model) {
-          // console.log('timeout called', model.fullRef());
-          var value = model.getModelValue();
-          if (Object.isObject(value)) {
-            model.setModelValue(value);
-          }
-        }, 0, model);
-      }
+      // if ((model.prevVal = model.getModelValue()) != null) {
+      //   $cheeta.future(function (model) {
+      //     // console.log('timeout called', model.fullRef());
+      //     var value = model.getModelValue();
+      //     if (Object.isObject(value)) {
+      //       model.setModelValue(value);
+      //     }
+      //   }, 0, model);
+      // }
     }
+    if (isNewModelCreated) this.interceptAllChildren(this.getModelValue(), undefined, name);
     return model;
   },
   makeChildren: function (tokens) {
@@ -60,33 +60,48 @@ $cheeta.Model.prototype = {
   getModelValue: function () {
     if (this.parent) {
       var parentVal = this.parent.getModelValue();
-      return parentVal && parentVal[this.name];
+      return (parentVal && parentVal[this.name]) ||
+        //to accomodate class A{} when window.A is undefined but eval(A) is function in chrome
+        (parentVal === window ? this.evalIgnore(this.name) : undefined);
     } else if (this.refModel) {
       return this.refModel.getModelValue();
-    } else
-      return $cheeta.Model.root;
+    } else {
+      return this.value;
+    }
   },
-  setModelValue(val) {
-    if (this.parent) {
+  evalIgnore: function (expr) {
+    try {
+      return eval(expr);
+    } catch (e) {
+      return undefined;
+    }
+  },
+  setModelValue: function (val) {
+    if (this.hasOwnProperty('value')) {
+      this.valueChange(this.value = this.interceptAllChildren(val));
+    } else if (this.parent) {
       var parentVal = this.parent.getModelValue();
       if (parentVal) parentVal[this.name] = val;
     } else if (this.refModel) {
       this.refModel.setModelValue(val);
     }
   },
+  prevVal: undefined,
   valueChange: function (obj) {
-    // if (this.getModelValue() !== obj) {
-    for (var i = 0; i < this.listeners.length; i++) {
-      var listener = this.listeners[i];
-      listener.call(this, obj);
-    }
-    this.iterateChildren(function (child, key) {
-      child.valueChange(obj && obj.hasOwnProperty(key) && obj[key]);
-    });
-    if (this.refs) {
-      for (var j = 0; j < this.refs.length; j++) {
-        this.refs[j].valueChange(obj);
+    if (this.prevVal !== obj) {
+      for (var i = 0; i < this.listeners.length; i++) {
+        var listener = this.listeners[i];
+        listener.call(this, obj);
       }
+      this.iterateChildren(function (child, key) {
+        child.valueChange(obj && obj.hasOwnProperty(key) && obj[key]);
+      });
+      if (this.refs) {
+        for (var j = 0; j < this.refs.length; j++) {
+          this.refs[j].valueChange(obj);
+        }
+      }
+      this.prevVal = obj;
     }
     return this;
   },
@@ -121,7 +136,7 @@ $cheeta.Model.prototype = {
   },
   intercept: function (obj) {
     if (obj) {
-      if (!('__isOoProxy__' in obj)) {
+      if (!('__isOoProxy__' in obj) && obj !== window) {
         // if (Object.isArray(obj)) {
         // for (var j = 0; j < this.arrayMethodNames.length; j++) {
         //   var methodName = this.arrayMethodNames[j];
@@ -129,58 +144,84 @@ $cheeta.Model.prototype = {
         // }
         // }
         var origObj = obj;
-        obj = obj.__ooProxy__ || new Proxy(obj, new $cheeta.Model.ProxyHandler());
-        Object.defineProperty(origObj, '__ooProxy__', {value: obj});
-        origObj.__ooProxy__ = obj;
+        if (obj.__ooProxy__) {
+          obj = obj.__ooProxy__;
+        } else {
+          obj = new Proxy(obj, new $cheeta.Model.ProxyHandler());
+          Object.defineProperty(origObj, '__ooProxy__', {
+            get: function () {
+              return obj;
+            }, enumerable: false
+          });
+          origObj.__ooProxy__ = obj;
+        }
       }
       obj.__ooModel__ = this;
     }
     return obj;
   },
-  interceptAllChildren: function (obj) {
+  interceptChild: function (obj, key, origObj) {
+    if (!Object.isObject(obj)) return;
+    origObj = origObj || obj;
+    var value = obj[key], child = this.children[key];
+    if (obj.hasOwnProperty(key)) {
+      value = child.interceptAllChildren(obj[key]);
+      if (value !== obj[key]) {
+        obj[key] = {value: value, __ooUpdateInterceptedVal__: true};
+      }
+    }
+    if (!('__isOoProxy__' in origObj)) {
+      console.log('prop defined', key, origObj);
+      var desc = Object.getOwnPropertyDescriptor(origObj, key);
+      if (!desc || desc.configurable) {
+        Object.defineProperty(origObj, key, {
+          get: function () {
+            return value;
+          },
+          set: function (val) {
+            if (origObj === window) {
+              child.valueChange(value = child.value = child.interceptAllChildren(val));
+            } else {
+              if (Object.isObject(val)) {
+                if (!val.__ooProxy__) {
+                  obj[key] = val;
+                  return;
+                }
+              }
+              value = val;
+            }
+          },
+          enumerable: (desc && desc.enumerable || true),
+          configurable: (desc && desc.configurable || true)
+        });
+        if (origObj === window) {
+          child.value = value;
+        }
+      }
+    }
+  },
+  interceptAllChildren: function (obj, origObj, newChildKey) {
     if (Object.isObject(obj)) {
+      origObj = origObj || obj;
       obj = this.intercept(obj);
-      this.iterateChildren(function (child, key) {
-        if (obj.hasOwnProperty(key)) {
-          var val = child.interceptAllChildren(obj[key]);
-          if (val !== obj[key]) {
-            obj[key] = {value: val, __ooUpdateInterceptedVal__: true};
+      if (newChildKey) {
+        this.interceptChild(obj, newChildKey, origObj);
+      } else {
+        for (var key in this.children) {
+          if (this.children.hasOwnProperty(key)) {
+            this.interceptChild(obj, key, origObj);
           }
         }
-      });
+      }
       if (this.refs) {
         for (var i = 0; i < this.refs.length; i++) {
           var refModel = this.refs[i];
-          refModel.interceptAllChildren(obj);
+          refModel.interceptAllChildren(obj, origObj);
         }
       }
     }
     return obj;
   },
-  // todo swap the childs in case for. array is sorted or spliced or shift/unshift
-  // arrayMethodNames: ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse'],
-  // interceptArrayFn: function (model, fn) {
-  //   return function () {
-  //     var oldLen = model.getValue().length;
-  //     try {
-  //       return fn.apply(this, arguments);
-  //     } finally {
-  //       model.valueChange();
-  //       var newLen = model.getValue().length;
-  //       if (newLen !== oldLen) {
-  //         if (newLen < oldLen) {
-  //           for (var i = newLen; i < oldLen; i++) {
-  //             model.children[i].delete();
-  //           }
-  //         }
-  //         var lengthModel = model.child('length', null, true);
-  //         lengthModel.prevValue = oldLen;
-  //         lengthModel.value = newLen;
-  //         lengthModel.valueChange();
-  //       }
-  //     }
-  //   };
-  // },
   allChildren: function () {
     var models = [];
     this.iterateChildren(function (child) {
@@ -190,8 +231,23 @@ $cheeta.Model.prototype = {
       }
     });
     return models;
+  },
+  printHierarchy: function (prefix) {
+    prefix = prefix || '';
+    console.log(prefix + (this.parent ? '' : '*') + this.name + ': ' + this.fullRef());
+    this.iterateChildren(function (child) {
+      child.printHierarchy(prefix + '   ');
+    });
+    if (this.refs) {
+      for (var j = 0; j < this.refs.length; j++) {
+        this.refs[j].printHierarchy(prefix);
+      }
+    }
   }
 };
+$cheeta.Model.root = new $cheeta.Model('window');
+$cheeta.Model.root.value = window;
+
 $cheeta.Model.ProxyHandler = function () {
   this.models = [];
 };
@@ -209,20 +265,20 @@ $cheeta.Model.ProxyHandler.prototype = {
         base[prop] = value.value;
         return true;
       }
-      base[prop] = value;
-      if (prop.indexOf('cars') > -1)
-        console.log('set', prop, base[prop], value);
       for (var i = 0; i < this.models.length; i++) {
         var m = this.models[i];
         if (m.deleted) {
           this.models.splice(i--, 1);
           continue;
         }
-        if (m.children[prop]) {
-          base[prop] = m.children[prop].interceptAllChildren(base[prop]);
-          m.children[prop].valueChange(base[prop]);
+        var child = m.children[prop];
+        if (child) {
+          value = child.interceptAllChildren(value);
+          base[prop] = value;
+          child.valueChange(value);
         }
       }
+      base[prop] = value;
     }
     return true;
   },
@@ -244,40 +300,6 @@ $cheeta.Model.ProxyHandler.prototype = {
   }
 };
 
-// $cheeta.Model.ArrayHandlerProto = Array.prototype;
-// $cheeta.Model.ArrayHandlerProto.push
-
-// (function () {
-//   var windowModel = new $cheeta.Model('');
-//   windowModel.value = window;
-//   window.$$cheetaId = 1;
-//   $cheeta.Model.root = windowModel.child('M');
-//   $cheeta.Model.root.modelRef = 'M';
-//   window.M = window.M || {};
-//   // $cheeta.Model.root = windowModel;
-//   // $cheeta.Model.root.modelRef = 'window';
-// })();
-//
-// $cheeta.model = function (name, value) {
-//   if (name === undefined) {
-//     return window.M;
-//   } else {
-//     var model = $cheeta.parser.parse(name, {}).models[0];
-//     if (value === undefined) {
-//       var val = model.getValue();
-//       if (val === undefined) {
-//         val = {};
-//         model.setValue(val);
-//       }
-//       return val;
-//     } else {
-//       model.setValue(value);
-//       return value;
-//     }
-//   }
-// };
-
-$cheeta.templates = [];
 $cheeta.watchFns = [];
 $cheeta.watch = function (modelExpr, fn) {
   $cheeta.watchFns.push(fn);
@@ -287,3 +309,28 @@ $cheeta.watch = function (modelExpr, fn) {
   document.body.appendChild(elem);
   $cheeta.compiler.compile(elem, [$cheeta.Model.root]);
 };
+
+// todo swap the childs in case for. array is sorted or spliced or shift/unshift
+// arrayMethodNames: ['push', 'pop', 'shift', 'unshift', 'splice', 'reverse'],
+// interceptArrayFn: function (model, fn) {
+//   return function () {
+//     var oldLen = model.getValue().length;
+//     try {
+//       return fn.apply(this, arguments);
+//     } finally {
+//       model.valueChange();
+//       var newLen = model.getValue().length;
+//       if (newLen !== oldLen) {
+//         if (newLen < oldLen) {
+//           for (var i = newLen; i < oldLen; i++) {
+//             model.children[i].delete();
+//           }
+//         }
+//         var lengthModel = model.child('length', null, true);
+//         lengthModel.prevValue = oldLen;
+//         lengthModel.value = newLen;
+//         lengthModel.valueChange();
+//       }
+//     }
+//   };
+// },

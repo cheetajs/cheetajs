@@ -4,7 +4,8 @@
   <script src="../dist/cheetajs.js"></script>
   <script src="../dist/cheetajs-debug.js"></script>
 </head>
-<body model.="person">
+<body>
+<div model.="person: Test.person">
 <input type="text" bind.=".name" id="value">
 Name: <span text.=".name"></span>
 <input type="text" bind.=".props.eye">
@@ -32,16 +33,16 @@ Eye: <span text.=".props.eye"></span>
 <button onclick.="person.cars2.reverse()">reverse</button>
 <button onclick.="person.cars2.unshift({name:'aaaa'})">unshift</button>
 <button onclick.="person.cars2.shift()">shift</button>
-
+</div>
 <script type="html/template" id="t1">
   {{node.name}}
   <ul>
     <li for.="node: node.children" view.="'t1'"></li>
   </ul>
 </script>
-<div view.="'t1'" model.="node: M.tree"></div>
+<div view.="'t1'" model.="node: Test.tree"></div>
 
-<div model.="node: M.tree;">
+<div model.="node: Test.tree;">
   {{node.name}}
   {{node.children[0].name}}
   <ul>
@@ -55,17 +56,33 @@ Eye: <span text.=".props.eye"></span>
     </li>
   </ul>
 </div>
+<div model.="w: new Water({colors: [{color:'cyan'}, {color:'red'}], minerals: ['Na','Ca']})">
+  <ul>
+    <li for.="c: w.props.colors">
+      {{c.color}}
+      <input type="text" bind.="c.color">
+    </li>
+  </ul>
+  <ul>
+    <li for.="m: w.props.minerals">
+      {{m}}
+      <input type="text" bind.="m">
+    </li>
+  </ul>
+</div>
 <script>
+  Oo.debug = true;
   Oo.future(function () {
-  M.ooDebug = true;
-    M.person = {};
-  M.person.name = 'Danial';
-  M.person.props = {eye: 'red', hair: 'blue'};
-    M.person.cars = [{name: 'Porche'}, {name: 'Ferrari'}/*, {name:'Tesla'}*/];
-    M.person.cars2 = M.person.cars;
-    M.tree2 = {name: 'bbbb', children: [{name: 'b'}, {name: 'c'}, {name: 'd'}]};
-    M.tree = {name: 'hi', children: [{name: 'aaa', children: [{name: 'b'}, {name: 'c'}, {name: 'd'}]}]}
+    window.Test = {};
+    Test.person = {};
+    Test.person.name = 'Danial';
+    Test.person.props = {eye: 'red', hair: 'blue'};
+    Test.person.cars = [{name: 'Porche'}, {name: 'Ferrari'}/*, {name:'Tesla'}*/];
+    Test.person.cars2 = Test.person.cars;
+    Test.tree2 = {name: 'bbbb', children: [{name: 'b'}, {name: 'c'}, {name: 'd'}]};
+    Test.tree = {name: 'hi', children: [{name: 'aaa', children: [{name: 'b'}, {name: 'c'}, {name: 'd'}]}]}
   });
+  class Water {constructor(props) {this.props = props}}
 </script>
 </body>
 </html>

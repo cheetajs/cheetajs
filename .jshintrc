@@ -20,6 +20,7 @@
   "globals": {
     "$cheeta":false,
     "Oo":false,
-    "E":false
+    "E":false,
+    "$0":false
   }
 }

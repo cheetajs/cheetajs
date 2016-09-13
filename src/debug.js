@@ -1,13 +1,13 @@
 $cheeta.debugger = {
   prevEl: null,
   capturing: false,
-  init: function (val) {
+  init: function () {
     $cheeta.templates['oo-debugger-panel'] =
       '<div model.="debug: M.ooDebugger; el: debug.elem">' +
       '<div>Click anywhere and hold down ctrl or alt to capture</div>' +
       '{{el.outerHTML.slice(0, el.outerHTML.indexOf(el.innerHTML))}}' +
       '<ul><li for.="attr: debug.attrs">{{{attr.name}}}={{{attr.value}}}' +
-      '<a onclick.=".evalVal = attr.ooAttr.evaluate()" href="javascript:">eval</a> {{JSON.stringify(.evalVal)}}</li></ul>' +
+      '<a onclick.=".evalVal = attr._ooAttr_.evaluate()" href="javascript:">eval</a> {{JSON.stringify(.evalVal)}}</li></ul>' +
       '</div>';
     document.addCssStyle('.oo-debugger {resize: horizontal; overflow: auto; width: 300px; ' +
       'background: #F9F9F9; position: fixed; ' +
@@ -15,8 +15,7 @@ $cheeta.debugger = {
       '.oo-debugger .oo-panel{transform: rotate(-180deg);position: absolute;bottom: 15px;right: 5px;' +
       'font-family: Arial,"Helvetica Neue",Helvetica,sans-serif;font-size:12px;}' +
       '.oo-hover-elem {outline: 1px solid red;}');
-    $cheeta.compiler.linkDirectives(window, 'watch', 'M.ooDebug: $cheeta.debugger.addPanel(M.ooDebug)');
-    window.M.ooDebug = val;
+    // $cheeta.compiler.linkDirectives(window, 'watch', 'M.ooDebug: $cheeta.debugger.addPanel(M.ooDebug)');
   },
   keyListener: function (e) {
     if ((e.which === 17 || e.which === 18) && e.type === 'keydown') {
@@ -37,7 +36,7 @@ $cheeta.debugger = {
     elem.addClass('oo-hover-elem');
     window.M.ooDebugger.elem = elem;
     window.M.ooDebugger.attrs = Array.prototype.slice.call(elem.attributes, 0).filter(function (attr) {
-      return !!attr.ooAttr;
+      return !!attr._ooAttr_;
     });
 
     // var panel = document.getElementById('oo-debugger');

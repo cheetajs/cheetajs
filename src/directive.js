@@ -58,35 +58,34 @@ $cheeta.Attribute = function (elem, name, value, key) {
   this.elem = elem;
   this.parsedMap = {};
   if (elem.getAttribute && elem.getAttribute(name)) {
-    elem.attributes[name].ooAttr = this;
+    elem.attributes[name]._ooAttr_ = this;
   }
 };
 $cheeta.Attribute.prototype = {
   fixExpr: function (expr) {
-    expr = (expr || this.value).trim();
-    if (expr.startsWith('.') && this.elem._ooScope_.last) {
-      expr = this.elem._ooScope_.last + expr;
-    }
-    return expr;
+    return (expr || this.value).trim();
   },
   parseModels: function (expr, baseOnly) {
     if (this.parsedMap[expr]) return this.parsedMap[expr];
     var attr = this, i = 0, result = [];
-    result.expr = $cheeta.parser.parse(expr, baseOnly, function (tokens, hasFn) {
+    result.expr = $cheeta.parser.parse(expr, baseOnly, function (tokens, hasFn, isSingleModel) {
       if (!tokens.length) return false;
-      if (!tokens[0].length) tokens[0] = attr.elem._ooScope_.last;
-      var scope = attr.findReferredScope(attr.elem._ooScope_, tokens[0]);
-      var model = scope.models[tokens[0]];
-      if (!model) return false;
+      var base = tokens[0];
+      if (!base.length) base = attr.elem._ooScope_.last;
+      var model = attr.findBaseModel(attr.elem._ooScope_, base);
       if (!baseOnly) {
         model = model.makeChildren(tokens);
       }
-      var key = baseOnly ? tokens[0] : '__oo__' + i++;
-      result.push({model: model, key: key, hasFn: hasFn});
+      var key = baseOnly ? base : '__oo__' + i++;
+      result.push({model: model, key: key, hasFn: hasFn, isSingleModel : isSingleModel});
       return key;
     });
     this.parsedMap[expr] = result;
     return result;
+  },
+  findBaseModel: function (scope, prop) {
+    return scope ? (scope.models[prop] || this.findBaseModel(scope.parent, prop)) :
+      $cheeta.Model.root.child(prop);
   },
   watch: function (fn, expr) {
     var attr = this;
@@ -94,15 +93,16 @@ $cheeta.Attribute.prototype = {
     var updateFn = function () {
       fn.call(this, attr.evaluate(expr), $cheeta.Model.currentEvent);
     };
-    var modelList = this.parseModels(expr);
+    var modelList = this.parseModels(expr), shouldRunUpdate = false;
     for (var i = 0; i < modelList.length; i++) {
       modelList[i].model.addListener(updateFn);
+      if (modelList[i].model.getModelValue() !== undefined) shouldRunUpdate = true;
     }
-    updateFn();
-  },
-  findReferredScope: function (scope, prop) {
-    return scope ? ((scope.models[prop] && scope) || this.findReferredScope(scope.parent, prop))
-      : window._ooScope_;
+    //!modelList.length for view.="'hi'"
+    // if (shouldRunUpdate || !modelList.length) {
+      // Oo.future(function(){updateFn();});
+      updateFn();
+    // }
   },
   attr: function (name) {
     return new $cheeta.Attribute(this.elem, name, this.getAttribute(name) || this.getAttribute(name + '.') || this.getAttribute('data-' + name + '.'));
@@ -112,6 +112,7 @@ $cheeta.Attribute.prototype = {
     var modelList = this.parseModels(this.fixExpr(expr), true);
     for (var j = 0; j < modelList.length; j++) {
       var entry = modelList[j];
+      if (entry.model === $cheeta.Model.root) continue;
       var modelValue = entry.model.getModelValue();
       if (modelValue == null && entry.hasFn) return undefined;
       params[entry.key] = modelValue;

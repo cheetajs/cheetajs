@@ -1,6 +1,5 @@
 /*jshint -W020 */
-window.$cheeta = window.$cheeta || {};
-window.Oo = window.$cheeta;
+window.$cheeta = window.Oo = {};
 // $cheeta.MapList = function () {
 //   this.list = [];
 // };

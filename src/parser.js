@@ -30,24 +30,34 @@ $cheeta.parser = {
       return parser.jsonPlaceHolder;
     });
     ref = ref.replace(this.modelVarRegExp, function (match) {
-      if (match.charAt(0) === '\'' || match.charAt(0) === '"' || !isNaN(match)) {
+      if (match.charAt(0) === '\'' || match.charAt(0) === '"' || !isNaN(match) || match === parser.jsonPlaceHolder) {
         return match;
       } else {
         var bracketIndex = match.length;
+        // parse expressions inside the brackets
         match = match.replace(/\[ *([^0-9'"].*?)\]/g, function (m, $1, index) {
           parser.parse($1, fn);
           if (bracketIndex === match.length) {
             bracketIndex = index;
           }
         });
-        var funcIndex = parser.functionPos(match.substring(0, bracketIndex));
-        var expr = match.substring(0, funcIndex);
+        var funcIndex, prefix = '', expr;
+        if (match.startsWith('new ')) {
+          funcIndex = match.length - 1;
+          prefix = 'new ';
+          expr = match.substring(4, funcIndex);
+        } else {
+          funcIndex = parser.functionPos(match.substring(0, bracketIndex));
+          expr = match.substring(0, funcIndex);
+        }
         var tokens = parser.toTokens(expr, baseOnly ? 1 : -1);
-        if (!tokens.length || (tokens.length === 1 && !tokens[0]) || parser.hasReserved(tokens[0])) {
+        if (!tokens.length || (tokens.length === 1 && !tokens[0] && match.search(/^\./) === -1) ||
+          parser.hasReserved(tokens[0])) {
           return match;
         } else {
-          var callbackResult = fn(tokens, funcIndex < match.length);
-          return (callbackResult === false ? expr : (callbackResult + (baseOnly ? expr.substring(tokens[0].length) : ''))) +
+          var callbackResult = fn(tokens, funcIndex < match.length, match === ref);
+          return prefix + (callbackResult === false ? expr :
+              (callbackResult + (baseOnly ? expr.substring(tokens[0].length) : ''))) +
             match.substring(funcIndex);
         }
       }
@@ -61,6 +71,8 @@ $cheeta.parser = {
   toTokens: function (expr, limit) {
     return expr.split(this.tokenizeRegExp, limit).filter(function (el, i) {
       return i === 0 || el.length !== 0;
+    }).map(function (s) {
+      return s.trim();
     });
   },
 };

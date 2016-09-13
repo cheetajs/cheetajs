@@ -1,3 +1,4 @@
+$cheeta.templates = [];
 $cheeta.compiler = {
   recursiveCompile: function (node, scope, skipNode) {
     if (node && (!node._ooCompiled_|| skipNode)) {
@@ -58,15 +59,16 @@ $cheeta.compiler = {
     return this.linkDirectives(elem, undefined, undefined, scope);
   },
   linkDirectives: function (elem, name, value, scope) {
-    var directives = this.getDirectives(elem, name ? [{name: name + '.', value: value}] : elem.attributes);
+    var directives = this.getDirectives(elem, name ? [{name: name + '.', value: value}] : elem.attributes),
+      result = {};
     if (!directives || !directives.length) return false;
     elem._ooScope_ = elem._ooScope_ || scope;
     for (var i = 0; i < directives.length; i++) {
       if (elem._ooIsTemplatePlaceHolder_) break;
       var dir = directives[i];
-      dir.directive.link(elem, new $cheeta.Attribute(elem, dir.name, dir.value, dir.key));
+      Object.copy(dir.directive.link(elem, new $cheeta.Attribute(elem, dir.name, dir.value, dir.key)), result);
     }
-    return true;
+    return result;
   },
   doCompile: function (elem, skipNode) {
     elem.addClass('oo-invisible');
@@ -114,14 +116,28 @@ window.addEventListener('load', function () {
     $cheeta.isInitialized = true;
     document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');
     $cheeta.hash.init();
-    // $cheeta.rootModel = new $cheeta.Model('M');
-    // $cheeta.rootModel.value = $cheeta.rootModel.intercept(window.M = {});
-    // window.ooScope = {models: {'M': $cheeta.rootModel}};
-    window.M = function(v){console.log(v);};
-    $cheeta.compiler.linkDirectives(window, 'model', 'M: window.M');
-    $cheeta.Model.root = window.M = window._ooScope_.models.M.intercept(window.M);
+    // window.M = function(v){console.log(v);};
+    // $cheeta.compiler.linkDirectives(window, 'model', 'M: window.M');
+      // .M.intercept(window.M);
     $cheeta.debugger.init($cheeta.debug);
     $cheeta.compiler.compile(document.documentElement);
     $cheeta.compiler.listenToElementRemoval();
+
+    if ($cheeta.debug) {
+      $cheeta.M = function(expr) {
+        return Array.prototype.slice.call($0.attributes, 0).filter(function (attr) {
+          return attr._ooAttr_;
+        })[0]._ooAttr_.evaluate(expr);
+      };
+      $cheeta.M.values = function() {
+        return $0._ooScope_ && Object.keys($0._ooScope_.models).reduce(function(p, c) {
+            p[c] = $0._ooScope_.models[c] .getModelValue();
+            return p;
+          }, {});
+      };
+      $cheeta.M.models = function() {
+        return $0._ooScope_ && $0._ooScope_.models;
+      };
+    }
   }
 }, false);
