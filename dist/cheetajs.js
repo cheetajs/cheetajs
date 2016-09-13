@@ -302,7 +302,7 @@ $cheeta.compiler = {
 window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
     $cheeta.isInitialized = true;
-    document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');
+    document.addCssStyle('.oo-invisible { visibility: hidden; } .hidden {display: none!important}');
     $cheeta.hash.init();
     // window.M = function(v){console.log(v);};
     // $cheeta.compiler.linkDirectives(window, 'model', 'M: window.M');
@@ -867,27 +867,36 @@ $cheeta.Future.prototype = {
 };
 $cheeta.Futures = function () {
   this.list = [];
-  this.afterFn = null;
+  this.afterFns = [];
 };
 $cheeta.Futures.prototype = {
   add: function (future) {
     this.list.push(future);
   },
   run: function () {
+    if (this.isRunning) return this;
     var futures = this;
     var list = this.list;
     this.list = [];
     setTimeout(function () {
-      for (var i = 0; i < list.length; i++) {
-        list[i].run();
+      this.isRunning = true;
+      try {
+        for (var i = 0; i < list.length; i++) {
+          list[i].run();
+        }
+      } finally {
+        delete this.isRunning;
       }
       if (futures.list.length) futures.run();
-      futures.afterFn.call();
+      for (var j = 0; j < futures.afterFns.length; j++) {
+        var fn = futures.afterFns[j];
+        fn.call();
+      }
     }, 0);
     return this;
   },
   after: function (fn) {
-    this.afterFn = fn;
+    this.afterFns.push(fn);
   }
 };
 $cheeta.Futures.current = new $cheeta.Futures();
@@ -1453,7 +1462,6 @@ $cheeta.Model.prototype = {
       }
     }
     if (!('__isOoProxy__' in origObj)) {
-      console.log('prop defined', key, origObj);
       var desc = Object.getOwnPropertyDescriptor(origObj, key);
       if (!desc || desc.configurable) {
         Object.defineProperty(origObj, key, {

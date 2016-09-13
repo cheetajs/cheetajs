@@ -114,7 +114,7 @@ $cheeta.compiler = {
 window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
     $cheeta.isInitialized = true;
-    document.addCssStyle('.oo-invisiblee { visibility: hidden; } .hidden {display: none!important}');
+    document.addCssStyle('.oo-invisible { visibility: hidden; } .hidden {display: none!important}');
     $cheeta.hash.init();
     // window.M = function(v){console.log(v);};
     // $cheeta.compiler.linkDirectives(window, 'model', 'M: window.M');

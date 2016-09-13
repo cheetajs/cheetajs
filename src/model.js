@@ -171,7 +171,6 @@ $cheeta.Model.prototype = {
       }
     }
     if (!('__isOoProxy__' in origObj)) {
-      console.log('prop defined', key, origObj);
       var desc = Object.getOwnPropertyDescriptor(origObj, key);
       if (!desc || desc.configurable) {
         Object.defineProperty(origObj, key, {
