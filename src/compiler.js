@@ -111,6 +111,7 @@ $cheeta.compiler = {
     mutationObserver.observe(document.body, {childList: true, subtree: true});
   }
 };
+
 window.addEventListener('load', function () {
   if (!$cheeta.isInitialized) {
     $cheeta.isInitialized = true;
@@ -122,22 +123,5 @@ window.addEventListener('load', function () {
     $cheeta.debugger.init($cheeta.debug);
     $cheeta.compiler.compile(document.documentElement);
     $cheeta.compiler.listenToElementRemoval();
-
-    if ($cheeta.debug) {
-      $cheeta.M = function(expr) {
-        return Array.prototype.slice.call($0.attributes, 0).filter(function (attr) {
-          return attr._ooAttr_;
-        })[0]._ooAttr_.evaluate(expr);
-      };
-      $cheeta.M.values = function() {
-        return $0._ooScope_ && Object.keys($0._ooScope_.models).reduce(function(p, c) {
-            p[c] = $0._ooScope_.models[c] .getModelValue();
-            return p;
-          }, {});
-      };
-      $cheeta.M.models = function() {
-        return $0._ooScope_ && $0._ooScope_.models;
-      };
-    }
   }
 }, false);

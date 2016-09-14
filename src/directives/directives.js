@@ -1,5 +1,5 @@
 $cheeta.directive.add({
-  name: 'watch*',
+  name: 'watch',
   link: function (elem, attr) {
     function makeEval(fn) {
       return function () {
@@ -7,9 +7,9 @@ $cheeta.directive.add({
       };
     }
 
-    var split = attr.value.split(';'), len = split.length;
-    while (len--) {
-      var modelFn = split[len].split(':');
+    var split = attr.value.split(';');
+    for (var i = 0; i < split.length; i++) {
+      var modelFn = split[i].split(':');
       attr.watch(makeEval(modelFn[1]), modelFn[0]);
     }
   }

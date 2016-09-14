@@ -6,69 +6,75 @@
 </head>
 <body>
 <div model.="person: Test.person">
-<input type="text" bind.=".name" id="value">
-Name: <span text.=".name"></span>
-<input type="text" bind.=".props.eye">
-Eye: <span text.=".props.eye"></span>
-{{.props.eye}}
-<ul>
-  <li for.="c: person.cars">{{.name}}
-    <input type="text" bind.=".name">
-  </li>
-</ul>
-<!--<button onclick.="person.cars.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>-->
-<!--<button onclick.="person.cars.push({name: 'name' + Math.random()})">add</button>-->
-<!--<button onclick.="person.cars.splice(0.1)">clear</button>-->
-<!--<button onclick.="person.cars.reverse()">reverse</button>-->
-<!--<button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>-->
-<!--<button onclick.="person.cars.shift()">shift</button>-->
-<!--<ul>-->
-  <!--<li for.="c: person.cars2">{{.name}}-->
-    <!--<input type="text" bind.=".name">-->
-  <!--</li>-->
-<!--</ul>-->
-<!--<button onclick.="person.cars2.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>-->
-<!--<button onclick.="person.cars2.push({name: 'name' + Math.random()})">add</button>-->
-<!--<button onclick.="person.cars2.splice(0.1)">clear</button>-->
-<!--<button onclick.="person.cars2.reverse()">reverse</button>-->
-<!--<button onclick.="person.cars2.unshift({name:'aaaa'})">unshift</button>-->
-<!--<button onclick.="person.cars2.shift()">shift</button>-->
-<!--</div>-->
-<!--<script type="html/template" id="t1">-->
-  <!--{{node.name}}-->
-  <!--<ul>-->
-    <!--<li for.="node: node.children" view.="'t1'"></li>-->
-  <!--</ul>-->
-<!--</script>-->
-<!--<div view.="'t1'" model.="node: Test.tree"></div>-->
+  <input type="text" bind.=".name" id="value">
+  Name: <span text.=".name"></span>
+  <input type="text" bind.=".props.eye">
+  Eye: <span text.=".props.eye"></span>
+  {{.props.eye}}
+  <ul>
+    <li for.="c: person.cars">{{.name}}
+      <input type="text" bind.=".name">
+    </li>
+  </ul>
+  <button onclick.="person.cars.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>
+  <button onclick.="person.cars.push({name: 'name' + Math.random()})">add</button>
+  <button onclick.="person.cars = []">clear</button>
+  <button onclick.="person.cars.splice(0, 100)">splice clear</button>
+  <button onclick.="person.cars.pop()">pop</button>
+  <button onclick.="person.cars.splice(0, 1)">splice</button>
+  <button onclick.="person.cars.reverse()">reverse</button>
+  <button onclick.="person.cars.unshift({name:'aaaa'})">unshift</button>
+  <button onclick.="person.cars.shift()">shift</button>
+  <ul>
+    <li for.="c: person.cars2">{{.name}}
+      <input type="text" bind.=".name">
+    </li>
+  </ul>
+  <button onclick.="person.cars2.sort(function(a,b){return a.name<b.name ? -1 : 1})">sort</button>
+  <button onclick.="person.cars2.push({name: 'name' + Math.random()})">add</button>
+  <button onclick.="person.cars2 = []">clear</button>
+  <button onclick.="person.cars2.splice(0, 100)">splice clear</button>
+  <button onclick.="person.cars2.pop()">pop</button>
+  <button onclick.="person.cars2.splice(0, 1)">splice</button>
+  <button onclick.="person.cars2.reverse()">reverse</button>
+  <button onclick.="person.cars2.unshift({name:'aaaa'})">unshift</button>
+  <button onclick.="person.cars2.shift()">shift</button>
+</div>
+<script type="html/template" id="t1">
+  {{node.name}}
+  <ul>
+    <li for.="node: node.children" view.="'t1'"></li>
+  </ul>
+</script>
+<div view.="'t1'" model.="node: Test.tree"></div>
 
-<!--<div model.="node: Test.tree;">-->
-  <!--{{node.name}}-->
-  <!--{{node.children[0].name}}-->
-  <!--<ul>-->
-    <!--<li model.="node: node.children[0]">-->
-      <!--{{node.name}}-->
-      <!--<ul>-->
-        <!--<li model.="node: node.children[2]">{{node.name}}</li>-->
-        <!--<li model.="node: node.children[1]">{{node.name}}</li>-->
-        <!--<li model.="node: node.children[0]">{{node.name}}</li>-->
-      <!--</ul>-->
-    <!--</li>-->
-  <!--</ul>-->
-<!--</div>-->
-<!--<div model.="w: new Water({colors: [{color:'cyan'}, {color:'red'}], minerals: ['Na','Ca']})">-->
-  <!--<ul>-->
-    <!--<li for.="c: w.props.colors">-->
-      <!--{{c.color}}-->
-      <!--<input type="text" bind.="c.color">-->
-    <!--</li>-->
-  <!--</ul>-->
-  <!--<ul>-->
-    <!--<li for.="m: w.props.minerals">-->
-      <!--{{m}}-->
-      <!--<input type="text" bind.="m">-->
-    <!--</li>-->
-  <!--</ul>-->
+<div model.="node: Test.tree;">
+  {{node.name}}
+  {{node.children[0].name}}
+  <ul>
+    <li model.="node: node.children[0]">
+      {{node.name}}
+      <ul>
+        <li model.="node: node.children[2]">{{node.name}}</li>
+        <li model.="node: node.children[1]">{{node.name}}</li>
+        <li model.="node: node.children[0]">{{node.name}}</li>
+      </ul>
+    </li>
+  </ul>
+</div>
+<div model.="w: new Water({colors: [{color:'cyan'}, {color:'red'}], minerals: ['Na','Ca']})">
+  <ul>
+    <li for.="c: w.props.colors">
+      {{c.color}}
+      <input type="text" bind.="c.color">
+    </li>
+  </ul>
+  <ul>
+    <li for.="m: w.props.minerals">
+      {{m}}
+      <input type="text" bind.="m">
+    </li>
+  </ul>
 </div>
 <script>
   Oo.debug = true;
@@ -82,7 +88,11 @@ Eye: <span text.=".props.eye"></span>
     Test.tree2 = {name: 'bbbb', children: [{name: 'b'}, {name: 'c'}, {name: 'd'}]};
     Test.tree = {name: 'hi', children: [{name: 'aaa', children: [{name: 'b'}, {name: 'c'}, {name: 'd'}]}]}
   });
-  class Water {constructor(props) {this.props = props}}
+  class Water {
+    constructor(props) {
+      this.props = props
+    }
+  }
 </script>
 </body>
 </html>

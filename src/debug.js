@@ -2,6 +2,23 @@ $cheeta.debugger = {
   prevEl: null,
   capturing: false,
   init: function () {
+    if ($cheeta.debug) {
+      window.M = function(expr) {
+        console.log(expr);
+        return Array.prototype.slice.call($0.attributes, 0).filter(function (attr) {
+          return attr._ooAttr_;
+        })[0]._ooAttr_.evaluate(expr);
+      };
+      window.M.values = function() {
+        return $0._ooScope_ && Object.keys($0._ooScope_.models).reduce(function(p, c) {
+            p[c] = $0._ooScope_.models[c] .getModelValue();
+            return p;
+          }, {});
+      };
+      window.M.models = function() {
+        return $0._ooScope_ && $0._ooScope_.models;
+      };
+    }
     $cheeta.templates['oo-debugger-panel'] =
       '<div model.="debug: M.ooDebugger; el: debug.elem">' +
       '<div>Click anywhere and hold down ctrl or alt to capture</div>' +

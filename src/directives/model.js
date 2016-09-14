@@ -5,7 +5,7 @@ $cheeta.directive.add({
     return function (val) {
       model.valueChange(model.value = model.interceptAllChildren(val));
       if ($cheeta.debug) {
-        ($cheeta.M = $cheeta.M || {})[model.name] = model.value;
+        (window.M = window.M || {})[model.name] = model.value;
       }
     };
   },

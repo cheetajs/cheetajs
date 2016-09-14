@@ -36,7 +36,7 @@ $cheeta.Model.prototype = {
       //   }, 0, model);
       // }
     }
-    if (isNewModelCreated) this.interceptAllChildren(this.getModelValue(), undefined, name);
+    if (isNewModelCreated) this.interceptAllChildren(this.getModelValue(), name);
     return model;
   },
   makeChildren: function (tokens) {
@@ -60,9 +60,12 @@ $cheeta.Model.prototype = {
   getModelValue: function () {
     if (this.parent) {
       var parentVal = this.parent.getModelValue();
-      return (parentVal && parentVal[this.name]) ||
+      var val = parentVal && parentVal[this.name];
+      if (val === undefined && parentVal === window) {
         //to accomodate class A{} when window.A is undefined but eval(A) is function in chrome
-        (parentVal === window ? this.evalIgnore(this.name) : undefined);
+        val = this.evalIgnore(this.name);
+      }
+      return val;
     } else if (this.refModel) {
       return this.refModel.getModelValue();
     } else {
@@ -136,7 +139,10 @@ $cheeta.Model.prototype = {
   },
   intercept: function (obj) {
     if (obj) {
-      if (!('__isOoProxy__' in obj) && obj !== window) {
+      if (obj === window) {
+      } else if (obj.__ooProxy__) {
+        obj = obj.__ooProxy__();
+      } else {
         // if (Object.isArray(obj)) {
         // for (var j = 0; j < this.arrayMethodNames.length; j++) {
         //   var methodName = this.arrayMethodNames[j];
@@ -144,25 +150,20 @@ $cheeta.Model.prototype = {
         // }
         // }
         var origObj = obj;
-        if (obj.__ooProxy__) {
-          obj = obj.__ooProxy__;
-        } else {
-          obj = new Proxy(obj, new $cheeta.Model.ProxyHandler());
-          Object.defineProperty(origObj, '__ooProxy__', {
-            get: function () {
-              return obj;
-            }, enumerable: false
-          });
-          origObj.__ooProxy__ = obj;
-        }
+        obj = new Proxy(obj, new $cheeta.Model.ProxyHandler());
+        origObj.__ooProxy__ = function () {
+          return obj;
+        };
+        obj.__ooOrigObj__ = function () {
+          return origObj;
+        };
       }
       obj.__ooModel__ = this;
     }
     return obj;
   },
-  interceptChild: function (obj, key, origObj) {
+  interceptChild: function (obj, key) {
     if (!Object.isObject(obj)) return;
-    origObj = origObj || obj;
     var value = obj[key], child = this.children[key];
     if (obj.hasOwnProperty(key)) {
       value = child.interceptAllChildren(obj[key]);
@@ -170,52 +171,48 @@ $cheeta.Model.prototype = {
         obj[key] = {value: value, __ooUpdateInterceptedVal__: true};
       }
     }
-    if (!('__isOoProxy__' in origObj)) {
-      var desc = Object.getOwnPropertyDescriptor(origObj, key);
-      if (!desc || desc.configurable) {
-        Object.defineProperty(origObj, key, {
-          get: function () {
-            return value;
-          },
-          set: function (val) {
-            if (origObj === window) {
-              child.valueChange(value = child.value = child.interceptAllChildren(val));
-            } else {
-              if (Object.isObject(val)) {
-                if (!val.__ooProxy__) {
-                  obj[key] = val;
-                  return;
-                }
-              }
+    var origObj = (obj.__ooOrigObj__ && obj.__ooOrigObj__()) || obj;
+    var desc = Object.getOwnPropertyDescriptor(origObj, key);
+    if (!desc || desc.configurable) {
+      Object.defineProperty(origObj, key, {
+        get: function () {
+          return value;
+        },
+        set: function (val) {
+          if (origObj === window) {
+            child.valueChange(value = child.value = child.interceptAllChildren(val));
+          } else {
+            if ($cheeta.proxyValueSet) {
               value = val;
+            } else {
+              obj[key] = val;
             }
-          },
-          enumerable: (desc && desc.enumerable || true),
-          configurable: (desc && desc.configurable || true)
-        });
-        if (origObj === window) {
-          child.value = value;
-        }
+          }
+        },
+        enumerable: (desc && desc.enumerable || true),
+        configurable: (desc && desc.configurable || true)
+      });
+      if (origObj === window) {
+        child.value = value;
       }
     }
   },
-  interceptAllChildren: function (obj, origObj, newChildKey) {
+  interceptAllChildren: function (obj, newChildKey) {
     if (Object.isObject(obj)) {
-      origObj = origObj || obj;
       obj = this.intercept(obj);
       if (newChildKey) {
-        this.interceptChild(obj, newChildKey, origObj);
+        this.interceptChild(obj, newChildKey);
       } else {
         for (var key in this.children) {
           if (this.children.hasOwnProperty(key)) {
-            this.interceptChild(obj, key, origObj);
+            this.interceptChild(obj, key);
           }
         }
       }
       if (this.refs) {
         for (var i = 0; i < this.refs.length; i++) {
           var refModel = this.refs[i];
-          refModel.interceptAllChildren(obj, origObj);
+          refModel.interceptAllChildren(obj);
         }
       }
     }
@@ -256,12 +253,17 @@ $cheeta.Model.ProxyHandler.prototype = {
     // needed for accessing not hasOwnProperty values like attribute.name
     return base[prop];
   },
+  setBaseValue: function (base, prop, val) {
+    $cheeta.proxyValueSet = true;
+    base[prop] = val;
+    $cheeta.proxyValueSet = false;
+  },
   set: function (base, prop, value) {
     if (prop === '__ooModel__') {
       if (this.models.indexOf(value) === -1) this.models.push(value);
-    } else {
+    } else if (prop !== '__ooOrigObj__') {
       if (value && value.__ooUpdateInterceptedVal__) {
-        base[prop] = value.value;
+        this.setBaseValue(base, prop, value.value);
         return true;
       }
       for (var i = 0; i < this.models.length; i++) {
@@ -273,11 +275,11 @@ $cheeta.Model.ProxyHandler.prototype = {
         var child = m.children[prop];
         if (child) {
           value = child.interceptAllChildren(value);
-          base[prop] = value;
+          this.setBaseValue(base, prop, value);
           child.valueChange(value);
         }
       }
-      base[prop] = value;
+      this.setBaseValue(base, prop, value);
     }
     return true;
   },
@@ -291,12 +293,6 @@ $cheeta.Model.ProxyHandler.prototype = {
     }
     return true;
   },
-  has: function (target, prop) {
-    if (prop === '__isOoProxy__') {
-      return true;
-    }
-    return prop in target;
-  }
 };
 
 $cheeta.watchFns = [];
