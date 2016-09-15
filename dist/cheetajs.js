@@ -1432,6 +1432,7 @@ $cheeta.Model.prototype = {
   intercept: function (obj) {
     if (obj) {
       if (obj === window) {
+        $cheeta.Model.root.proxyHandler.addModel(this);
       } else if (obj.__ooProxy__) {
         obj = obj.__ooProxy__();
       } else {
@@ -1472,7 +1473,8 @@ $cheeta.Model.prototype = {
         },
         set: function (val) {
           if (origObj === window) {
-            child.valueChange(value = child.value = child.interceptAllChildren(val));
+            $cheeta.Model.root.proxyHandler.set(origObj, key, val);
+            // child.valueChange(value = child.value = child.interceptAllChildren(val));
           } else {
             if ($cheeta.proxyValueSet) {
               value = val;
@@ -1533,9 +1535,6 @@ $cheeta.Model.prototype = {
     }
   }
 };
-$cheeta.Model.root = new $cheeta.Model('window');
-$cheeta.Model.root.value = window;
-
 $cheeta.Model.ProxyHandler = function () {
   this.models = [];
 };
@@ -1550,9 +1549,12 @@ $cheeta.Model.ProxyHandler.prototype = {
     base[prop] = val;
     $cheeta.proxyValueSet = false;
   },
+  addModel: function(m) {
+    if (this.models.indexOf(m) === -1) this.models.push(m);
+  },
   set: function (base, prop, value) {
     if (prop === '__ooModel__') {
-      if (this.models.indexOf(value) === -1) this.models.push(value);
+      this.addModel(value);
     } else if (prop !== '__ooOrigObj__') {
       if (value && value.__ooUpdateInterceptedVal__) {
         this.setBaseValue(base, prop, value.value);
@@ -1586,6 +1588,9 @@ $cheeta.Model.ProxyHandler.prototype = {
     return true;
   },
 };
+$cheeta.Model.root = new $cheeta.Model('window');
+$cheeta.Model.root.value = window;
+$cheeta.Model.root.proxyHandler = new $cheeta.Model.ProxyHandler();
 
 $cheeta.watchFns = [];
 $cheeta.watch = function (modelExpr, fn) {
